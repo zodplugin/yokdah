@@ -66,10 +66,14 @@ export async function authRoutes(fastify: FastifyInstance) {
   })
 
   fastify.post('/register', async (request: any, reply) => {
-    const { email, whatsappNumber, displayName, age, gender } = request.body
+    const { email, whatsappNumber } = request.body
 
-    if (!email || !whatsappNumber || !displayName || !age || !gender) {
-      return reply.code(400).send({ error: 'Missing required fields' })
+    if (!email || !whatsappNumber) {
+      return reply.code(400).send({ error: 'Missing required fields: email and whatsappNumber are required' })
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return reply.code(400).send({ error: 'Invalid email format' })
     }
 
     let formattedNumber: string
@@ -93,7 +97,10 @@ export async function authRoutes(fastify: FastifyInstance) {
       return reply.code(409).send({ error: 'WhatsApp number already registered' })
     }
 
-    const token = fastify.jwt.sign({ userId: 'temp', type: 'onboarding', data: { email: email.toLowerCase(), whatsappNumber: formattedNumber, displayName, age, gender } }, { expiresIn: '1h' })
+    const token = fastify.jwt.sign(
+      { userId: 'temp', type: 'onboarding', data: { email: email.toLowerCase(), whatsappNumber: formattedNumber } },
+      { expiresIn: '1h' }
+    )
 
     return {
       token,
@@ -101,9 +108,9 @@ export async function authRoutes(fastify: FastifyInstance) {
         id: null,
         email: email.toLowerCase(),
         whatsappNumber: formattedNumber,
-        displayName,
-        age,
-        gender,
+        displayName: '',
+        age: null,
+        gender: null,
         photo: null,
         vibeTags: [],
         reliabilityScore: 100,
@@ -157,11 +164,48 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
     }]
   }, async (request: any, reply) => {
-    const { photo, vibeTags, genderPreference, ageMin, ageMax, defaultGroupSize } = request.body
+    const { photo, vibeTags, genderPreference, ageMin, ageMax, defaultGroupSize, displayName, age, gender } = request.body
     const userId = request.user.userId
 
     if (userId === 'temp') {
-      return reply.code(400).send({ error: 'Cannot complete onboarding with temporary token' })
+      const tempData = request.user.data || {}
+
+      const newUser = await User.create({
+        email: tempData.email,
+        whatsappNumber: tempData.whatsappNumber,
+        displayName: displayName || '',
+        age: parseInt(age) || null,
+        gender: gender || null,
+        photo: photo || null,
+        vibeTags: vibeTags || [],
+        genderPreference: genderPreference || 'any',
+        ageMin: parseInt(ageMin) || 18,
+        ageMax: parseInt(ageMax) || 50,
+        defaultGroupSize: defaultGroupSize || 'flexible',
+        reliabilityScore: 100,
+        ratingAvg: 0,
+        ratingCount: 0,
+        isVerified: false,
+        eventsAttended: 0
+      })
+
+      const newToken = fastify.jwt.sign({ userId: newUser._id }, { expiresIn: '30d' })
+
+      return {
+        token: newToken,
+        user: {
+          id: newUser._id,
+          email: newUser.email,
+          whatsappNumber: newUser.whatsappNumber,
+          displayName: newUser.displayName,
+          age: newUser.age,
+          gender: newUser.gender,
+          photo: newUser.photo,
+          vibeTags: newUser.vibeTags,
+          reliabilityScore: newUser.reliabilityScore,
+          isOnboardingComplete: true
+        }
+      }
     }
 
     const user = await User.findById(userId)
@@ -175,6 +219,9 @@ export async function authRoutes(fastify: FastifyInstance) {
     if (ageMin) user.ageMin = ageMin
     if (ageMax) user.ageMax = ageMax
     if (defaultGroupSize) user.defaultGroupSize = defaultGroupSize
+    if (displayName) user.displayName = displayName
+    if (age) user.age = parseInt(age)
+    if (gender) user.gender = gender
 
     await user.save()
 

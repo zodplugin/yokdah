@@ -13,7 +13,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
       startDate,
       endDate,
       page = 1,
-      limit = 20
+      limit = 100
     } = request.query
 
     const query: any = { status }
@@ -24,6 +24,8 @@ export async function eventRoutes(fastify: FastifyInstance) {
       query.date = {}
       if (startDate) query.date.$gte = new Date(startDate)
       if (endDate) query.date.$lte = new Date(endDate)
+    } else {
+      query.date = { $gte: new Date() }
     }
 
     const events = await Event.find(query)

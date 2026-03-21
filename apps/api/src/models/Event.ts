@@ -6,7 +6,7 @@ export interface IEvent extends Document {
   city: string
   date: Date
   endTime?: Date
-  category: 'concert' | 'party' | 'activity' | 'sport'
+  category: 'concert' | 'festival' | 'party' | 'activity' | 'sport'
   description: string
   coverImage: string
   ticketUrl: string
@@ -16,6 +16,8 @@ export interface IEvent extends Document {
   maxAttendees?: number
   createdAt: Date
   updatedAt: Date
+  location_name?: string
+  province?: string
 }
 
 const eventSchema = new Schema<IEvent>(
@@ -41,7 +43,7 @@ const eventSchema = new Schema<IEvent>(
     },
     category: {
       type: String,
-      enum: ['concert', 'party', 'activity', 'sport'],
+      enum: ['concert', 'festival', 'party', 'activity', 'sport'],
       required: true
     },
     description: {
@@ -71,6 +73,12 @@ const eventSchema = new Schema<IEvent>(
     },
     maxAttendees: {
       type: Number
+    },
+    location_name: {
+      type: String
+    },
+    province: {
+      type: String
     }
   },
   {

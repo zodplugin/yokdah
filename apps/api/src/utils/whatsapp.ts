@@ -60,7 +60,7 @@ export async function sendWhatsApp(to: string, message: string) {
 
 export function formatWhatsAppNumber(phone: string): string {
   let formatted = phone.replace(/\D/g, '')
-  
+
   if (formatted.startsWith('0') && formatted.length === 10) {
     formatted = '62' + formatted.substring(1)
   } else if (formatted.startsWith('62') && formatted.length === 12) {
@@ -68,9 +68,9 @@ export function formatWhatsAppNumber(phone: string): string {
   } else if (formatted.startsWith('628') && formatted.length === 13) {
     formatted = formatted
   } else {
-    throw new Error('Invalid Indonesian phone number format')
+    throw new Error('Invalid Indonesian phone number format. Please use format: 08xxxxxxxxxx (10-12 digits) or 62xxxxxxxxxx')
   }
-  
+
   return formatted
 }
 

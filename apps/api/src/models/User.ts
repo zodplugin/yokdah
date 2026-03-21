@@ -58,7 +58,7 @@ const userSchema = new Schema<IUser>(
     },
     vibeTags: {
       type: [String],
-      enum: ['chill', 'hype', 'first-timer', 'regular', 'introvert-friendly', 'social butterfly', 'early bird', 'night owl'],
+      enum: ['chill', 'hype', 'first-timer', 'regular', 'introvert-friendly', 'social butterfly', 'early bird', 'night owl','adventurous', 'quiet vibes'],
       validate: {
         validator: (v: string[]) => v.length >= 1 && v.length <= 3,
         message: 'Must select 1-3 vibe tags'
