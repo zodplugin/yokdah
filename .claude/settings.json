@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const MatchRequest = require\\(''./src/models/MatchRequest''\\); console.log\\(''MatchRequest loaded:'', !!MatchRequest\\);\")"
+    ]
+  }
+}

@@ -8,6 +8,8 @@ export interface IChatMessage extends Document {
   type: 'text' | 'photo' | 'system'
   systemMessageType?: 'ice-breaker' | 'confirmation-prompt' | 'member-join' | 'member-leave' | 'member-removed'
   readBy: string[]
+  replyToId?: string
+  isPinned: boolean
   createdAt: Date
 }
 
@@ -40,11 +42,18 @@ const chatMessageSchema = new Schema<IChatMessage>(
     readBy: {
       type: [String],
       default: []
+    },
+    replyToId: {
+      type: String,
+      ref: 'ChatMessage'
+    },
+    isPinned: {
+      type: Boolean,
+      default: false
     }
   },
   {
-    timestamps: true,
-    createdAt: 'createdAt'
+    timestamps: true
   }
 )
 

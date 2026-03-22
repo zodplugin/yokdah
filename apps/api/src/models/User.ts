@@ -19,6 +19,9 @@ export interface IUser extends Document {
   eventsAttended: number
   blockedUsers: string[]
   role: 'user' | 'admin'
+  oneSignalSubscriptionId?: string
+  otp?: string
+  otpExpires?: Date
   createdAt: Date
   updatedAt: Date
 }
@@ -114,6 +117,15 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ['user', 'admin'],
       default: 'user'
+    },
+    oneSignalSubscriptionId: {
+      type: String
+    },
+    otp: {
+      type: String
+    },
+    otpExpires: {
+      type: Date
     }
   },
   {

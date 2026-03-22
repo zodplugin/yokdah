@@ -1,0 +1,40 @@
+# Common
+node_modules/
+.env*
+.DS_Store
+*.log
+*.pem
+*.tsbuildinfo
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.expo/
+web-build/
+coverage/
+.nyc_output/
+
+# Mobile specific
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+/apps/mobile/ios
+/apps/mobile/android
+
+# Misc
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.vercel
+next-env.d.ts

@@ -22,8 +22,9 @@ const matchSchema = new Schema<IMatch>(
     },
     chatRoomId: {
       type: String,
-      required: true,
-      unique: true
+      required: false,
+      unique: true,
+      sparse: true 
     },
     status: {
       type: String,

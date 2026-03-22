@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate } from '../middleware/auth'
 import { User } from '../models/User'
+import { Match } from '../models/Match'
 import { uploadToR2 } from '../utils/storage'
 
 export async function userRoutes(fastify: FastifyInstance) {
@@ -11,6 +12,11 @@ export async function userRoutes(fastify: FastifyInstance) {
     if (!user) {
       throw { code: 404, message: 'User not found' }
     }
+
+    const squadCount = await Match.countDocuments({ 
+      memberIds: String(request.user.userId),
+      status: { $ne: 'cancelled' } 
+    })
 
     return {
       id: user._id,
@@ -28,7 +34,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       ratingAvg: user.ratingAvg,
       ratingCount: user.ratingCount,
       isVerified: user.isVerified,
-      eventsAttended: user.eventsAttended
+      eventsAttended: squadCount // Use dynamic count
     }
   })
 
@@ -172,5 +178,21 @@ export async function userRoutes(fastify: FastifyInstance) {
       displayName: blockedUser.displayName,
       photo: blockedUser.photo
     }))
+  })
+
+  fastify.patch('/push-token', {
+    onRequest: [authenticate]
+  }, async (request: any, reply) => {
+    const { subscriptionId } = request.body
+
+    const user = await User.findById(request.user.userId)
+    if (!user) {
+      return reply.code(404).send({ error: 'User not found' })
+    }
+
+    user.oneSignalSubscriptionId = subscriptionId
+    await user.save()
+
+    return { success: true }
   })
 }

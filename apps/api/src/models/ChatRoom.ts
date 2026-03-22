@@ -4,7 +4,9 @@ export interface IChatRoom extends Document {
   eventId: string
   matchId: string
   memberIds: string[]
-  confirmationStatus: Map<string, 'going' | 'pending' | 'not-going'>
+  confirmationStatus: Map<string, 'going' | 'pending' | 'not-going' | 'cant_go'>
+  pinnedMessageId?: string
+  lastRead: Map<string, Date>
   expiresAt: Date
   createdAt: Date
   updatedAt: Date
@@ -28,6 +30,14 @@ const chatRoomSchema = new Schema<IChatRoom>(
     confirmationStatus: {
       type: Map,
       of: String,
+      default: new Map()
+    },
+    pinnedMessageId: {
+      type: String
+    },
+    lastRead: {
+      type: Map,
+      of: Date,
       default: new Map()
     },
     expiresAt: {

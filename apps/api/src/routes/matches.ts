@@ -6,9 +6,10 @@ import { ChatRoom } from '../models/ChatRoom'
 import { ChatMessage } from '../models/ChatMessage'
 import { Event } from '../models/Event'
 import { User } from '../models/User'
-import { matchQueue } from '../config/queue'
+import { matchQueue, addMatchJob } from '../config/queue'
 import { calculateDaysUntilEvent } from '../utils/helpers'
 import { calculateScore } from '../services/matchingService'
+import mongoose from 'mongoose' 
 
 export async function matchRoutes(fastify: FastifyInstance) {
   fastify.post('/request', {
@@ -17,10 +18,11 @@ export async function matchRoutes(fastify: FastifyInstance) {
     const { eventId, groupSize, genderPreference, ageMin, ageMax, vibeTags } = request.body
     const userId = request.user.userId
 
+    console.log(`User Id : ${userId}`)
+
     const existingRequest = await MatchRequest.findOne({
       userId,
       eventId,
-      status: { $in: ['pending', 'matched', 'confirmed'] }
     })
 
     if (existingRequest) {
@@ -55,10 +57,7 @@ export async function matchRoutes(fastify: FastifyInstance) {
 
     await matchRequest.save()
 
-    await matchQueue.add('run-matching', { eventId }, {
-      delay: 30000,
-      jobId: `match-${eventId}-${Date.now()}`
-    })
+    await addMatchJob(eventId)
 
     return {
       id: matchRequest._id,
@@ -70,18 +69,86 @@ export async function matchRoutes(fastify: FastifyInstance) {
   fastify.get('/requests', {
     onRequest: [authenticate]
   }, async (request: any) => {
-    const { status } = request.query
+    const { status, limit = 10, page = 1 } = request.query
+    const skip = (parseInt(limit as string) * (parseInt(page as string) - 1))
 
-    const query: any = { userId: request.user.userId }
-    if (status) query.status = status
+    const userId = String(request.user.userId)
+    const query: any = { userId }
 
+    if (status) {
+      const statusArray = (status as string).split(',')
+      query.status = { $in: statusArray }
+    }
+
+    const total = await MatchRequest.countDocuments(query)
     const requests = await MatchRequest.find(query)
       .sort({ createdAt: -1 })
-      .populate('eventId', 'name venue date category coverImage')
+      .skip(skip)
+      .limit(parseInt(limit as string))
+      .populate({ path: 'eventId', model: 'Event', select: 'name venue date category coverImage' })
       .lean()
 
-    return { requests }
+    const enrichedRequests = await Promise.all(requests.map(async (req: any) => {
+      if (!req.eventId) return null;
+
+      if (req.status === 'matched' || req.status === 'confirmed') {
+        const eventIdStr = typeof req.eventId === 'string' ? req.eventId : String(req.eventId._id || req.eventId);
+        const match = await Match.findOne({
+          eventId: eventIdStr,
+          memberIds: userId,
+          status: { $in: ['matched', 'confirmed'] }
+        }).lean();
+
+        let members: any[] = [];
+        let unreadCount = 0;
+        let chatRoomId = null;
+
+        if (match) {
+          chatRoomId = String(match._id); // In our system, matchId is often reused or linked
+          const chatRoom = await ChatRoom.findOne({ matchId: match._id });
+          if (chatRoom) {
+            chatRoomId = String(chatRoom._id);
+            const lastRead = chatRoom.lastRead ? (chatRoom.lastRead.get(userId) || new Date(0)) : new Date(0);
+            unreadCount = await ChatMessage.countDocuments({
+              chatRoomId: chatRoom._id,
+              senderId: { $ne: userId },
+              createdAt: { $gt: lastRead }
+            });
+          }
+
+          if (match.memberIds) {
+            const userDocs = await User.find({ _id: { $in: match.memberIds } }, 'displayName photo reliabilityScore').lean();
+            members = userDocs.map(m => ({
+              id: m._id,
+              displayName: m.displayName,
+              photo: m.photo,
+              reliabilityScore: m.reliabilityScore
+            }));
+          }
+        }
+
+        return {
+          ...req,
+          matchId: match?._id,
+          chatRoomId,
+          unreadCount,
+          members
+        };
+      }
+      return req;
+    }));
+
+    return { 
+      requests: enrichedRequests.filter(Boolean),
+      pagination: {
+        total,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        pages: Math.ceil(total / parseInt(limit as string))
+      }
+    }
   })
+
 
   fastify.get('/:matchId', {
     onRequest: [authenticate]
@@ -112,11 +179,12 @@ export async function matchRoutes(fastify: FastifyInstance) {
       })),
       chatRoomId: match.chatRoomId,
       confirmationStatus: chatRoom?.confirmationStatus || {},
+      pinnedMessageId: chatRoom?.pinnedMessageId,
       status: match.status
     }
   })
 
-  fastify.delete('/:requestId', {
+  fastify.delete('/requests/:requestId', {
     onRequest: [authenticate]
   }, async (request: any, reply) => {
     const { requestId } = request.params

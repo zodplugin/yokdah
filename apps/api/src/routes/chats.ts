@@ -4,6 +4,9 @@ import { ChatRoom } from '../models/ChatRoom'
 import { ChatMessage } from '../models/ChatMessage'
 import { Match } from '../models/Match'
 import { uploadToR2 } from '../utils/storage'
+import { User } from '../models/User'
+import { io } from '../config/socket'
+import mongoose from 'mongoose'
 
 export async function chatRoutes(fastify: FastifyInstance) {
   fastify.get('/:chatRoomId/messages', {
@@ -28,6 +31,16 @@ export async function chatRoutes(fastify: FastifyInstance) {
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .populate('senderId', 'displayName photo')
+      .populate({
+        path: 'replyToId',
+        select: 'content senderId type photoUrl',
+        populate: { path: 'senderId', select: 'displayName' }
+      })
+
+    if (!before && messages.length > 0) {
+      chatRoom.lastRead.set(request.user.userId, new Date())
+      await chatRoom.save()
+    }
 
     return { messages: messages.reverse() }
   })
@@ -36,7 +49,13 @@ export async function chatRoutes(fastify: FastifyInstance) {
     onRequest: [authenticate]
   }, async (request: any, reply) => {
     const { chatRoomId } = request.params
-    const { content, photoUrl } = request.body
+    const { content, photoUrl, replyToId } = request.body
+
+    const mongoose = require('mongoose');
+    let validReplyToId = replyToId;
+    if (replyToId && !mongoose.Types.ObjectId.isValid(replyToId)) {
+       validReplyToId = undefined;
+    }
 
     if (!content && !photoUrl) {
       return reply.code(400).send({ error: 'Content or photo required' })
@@ -56,13 +75,90 @@ export async function chatRoutes(fastify: FastifyInstance) {
       senderId: request.user.userId,
       content,
       photoUrl,
+      replyToId: validReplyToId,
       type: photoUrl ? 'photo' : 'text',
       readBy: [request.user.userId]
     })
 
     await message.save()
 
+    // Push Notification
+    const otherMemberIds = chatRoom.memberIds.filter(id => id.toString() !== request.user.userId.toString())
+    if (otherMemberIds.length > 0) {
+      const { sendPushNotification } = require('../services/OneSignalService')
+      const sender = await User.findById(request.user.userId)
+      const Event = mongoose.model('Event')
+      const event = await Event.findById(chatRoom.eventId)
+      
+      sendPushNotification(
+        otherMemberIds.map(id => id.toString()),
+        event?.name || 'New Message',
+        `${sender?.displayName || 'Someone'}: ${content || '📷 Photo'}`,
+        { chatId: chatRoomId, matchId: chatRoom.matchId }
+      ).catch((err: any) => console.error('Push Error:', err))
+    }
+
     return message
+  })
+
+  fastify.post('/:chatRoomId/messages/:messageId/pin', {
+    onRequest: [authenticate]
+  }, async (request: any, reply) => {
+    const { chatRoomId, messageId } = request.params
+
+    if (!mongoose.Types.ObjectId.isValid(messageId)) {
+      return reply.code(400).send({ error: 'Invalid message ID' })
+    }
+
+    const chatRoom = await ChatRoom.findById(chatRoomId)
+    if (!chatRoom || !chatRoom.memberIds.includes(request.user.userId)) {
+      return reply.code(403).send({ error: 'Access denied' })
+    }
+
+    const message = await ChatMessage.findById(messageId);
+    if (!message || message.chatRoomId !== chatRoomId) {
+      return reply.code(404).send({ error: 'Message not found' })
+    }
+
+    const previousPinnedId = chatRoom.pinnedMessageId;
+    
+    if (previousPinnedId === messageId) {
+      // Unpin
+      chatRoom.pinnedMessageId = undefined;
+      message.isPinned = false;
+      await message.save();
+    } else {
+      // Pin new one
+      if (previousPinnedId) {
+        await ChatMessage.findByIdAndUpdate(previousPinnedId, { isPinned: false });
+      }
+      chatRoom.pinnedMessageId = messageId;
+      message.isPinned = true;
+      await message.save();
+    }
+    
+    await chatRoom.save();
+
+    if (io) {
+      const chatRoomPopulated = await ChatRoom.findById(chatRoomId).populate('pinnedMessageId');
+      
+      io.to(`chat:${chatRoomId}`).emit('message-pinned', {
+        messageId: chatRoom.pinnedMessageId || null,
+        pinnedMessage: chatRoom.pinnedMessageId ? message : null,
+        chatRoomId
+      });
+      
+      chatRoom.memberIds.forEach((memberId: string) => {
+        if (memberId !== request.user.userId) {
+          io.to(`user:${memberId}`).emit('global-message-pinned', {
+             messageId: chatRoom.pinnedMessageId || null,
+             chatRoomId
+          });
+        }
+      });
+    }
+
+    return { success: true, pinnedMessageId: chatRoom.pinnedMessageId }
   })
 
   fastify.post('/:chatRoomId/upload', {
@@ -122,7 +218,7 @@ export async function chatRoutes(fastify: FastifyInstance) {
     const { chatRoomId } = request.params
     const { status } = request.body
 
-    if (!['going', 'not-going'].includes(status)) {
+    if (!['going', 'cant_go'].includes(status)) {
       return reply.code(400).send({ error: 'Invalid status' })
     }
 
@@ -142,6 +238,161 @@ export async function chatRoutes(fastify: FastifyInstance) {
 
     chatRoom.confirmationStatus.set(request.user.userId.toString(), status)
     await chatRoom.save()
+
+    const currentUser = await User.findById(request.user.userId);
+    const displayName = currentUser?.displayName || 'Unknown';
+
+    if (io) {
+      const payload = {
+        userId: request.user.userId,
+        userName: displayName,
+        status,
+        chatId: chatRoomId,
+        matchId: chatRoom.matchId
+      };
+      io.to(`chat:${chatRoomId}`).emit('confirmation_update', payload);
+
+      const Event = mongoose.model('Event');
+      const event = await Event.findById(chatRoom.eventId);
+
+      chatRoom.memberIds.forEach((memberId: string) => {
+        if (memberId !== request.user.userId.toString()) {
+          io.to(`user:${memberId}`).emit('global-confirmation_update', payload);
+          // Also emit as a new message so it shows up as a toast/notification
+          io.to(`user:${memberId}`).emit('global-new-message', {
+            chatId: chatRoomId,
+            message: `${displayName} is ${status === 'going' ? 'confirmed' : 'unable to go'}.`,
+            senderId: 'system',
+            senderName: 'System',
+            eventName: event?.name || 'Squad',
+            matchId: chatRoom.matchId,
+            timestamp: new Date()
+          });
+        }
+      });
+    }
+
+    if (status === 'going') {
+      let allGoing = true;
+      for (const memberId of chatRoom.memberIds) {
+        if (chatRoom.confirmationStatus.get(memberId.toString()) !== 'going') {
+          allGoing = false;
+          break;
+        }
+      }
+
+      if (allGoing && chatRoom.memberIds.length > 0) {
+        const match = await Match.findOne({ chatRoomId });
+        if (match && match.status !== 'confirmed') {
+          match.status = 'confirmed';
+          await match.save();
+        }
+
+        const sysMessage = new ChatMessage({
+          chatRoomId,
+          content: 'Squad confirmed! See you all there! 🎉',
+          type: 'system',
+          senderId: 'system',
+          readBy: [request.user.userId]
+        })
+        await sysMessage.save();
+
+        if (io) {
+          const Event = mongoose.model('Event');
+          const event = await Event.findById(chatRoom.eventId);
+          const sysPayload = {
+             _id: sysMessage._id,
+             chatId: chatRoomId,
+             message: sysMessage.content,
+             senderId: 'system',
+             senderName: 'System',
+             eventName: event?.name || 'Squad',
+             matchId: chatRoom.matchId,
+             timestamp: sysMessage.createdAt
+          };
+          io.to(`chat:${chatRoomId}`).emit('new-message', sysPayload);
+          chatRoom.memberIds.forEach((memberId: string) => {
+            if (memberId !== request.user.userId.toString()) {
+              io.to(`user:${memberId}`).emit('global-new-message', sysPayload);
+            }
+          });
+        }
+      }
+    } else if (status === 'cant_go') {
+        const sysMessage = new ChatMessage({
+          chatRoomId,
+          content: `${displayName} can't make it.`,
+          type: 'system',
+          senderId: 'system',
+          systemMessageType: 'member-leave',
+          readBy: [request.user.userId]
+        })
+        await sysMessage.save();
+
+        // Update Match and MatchRequest
+        const MatchRequest = mongoose.model('MatchRequest');
+        const match = await Match.findOne({ chatRoomId });
+        
+        if (match) {
+          // Remove from memberIds in both Match and ChatRoom
+          match.memberIds = match.memberIds.filter(id => id !== request.user.userId.toString());
+          if (match.memberIds.length === 0) {
+            match.status = 'cancelled';
+          }
+          await match.save();
+
+          chatRoom.memberIds = chatRoom.memberIds.filter(id => id !== request.user.userId.toString());
+          await chatRoom.save();
+
+          // Reset MatchRequest to pending so they can match again
+          await MatchRequest.updateOne(
+            { userId: request.user.userId, eventId: match.eventId, status: { $in: ['matched', 'confirmed'] } },
+            { $set: { status: 'pending' } }
+          );
+        }
+
+        if (io) {
+          const Event = mongoose.model('Event');
+          const event = await Event.findById(chatRoom.eventId);
+          const sysPayload = {
+             _id: sysMessage._id,
+             chatId: chatRoomId,
+             message: sysMessage.content,
+             senderId: 'system',
+             senderName: 'System',
+             eventName: event?.name || 'Squad',
+             matchId: chatRoom.matchId,
+             timestamp: sysMessage.createdAt
+          };
+          io.to(`chat:${chatRoomId}`).emit('new-message', sysPayload);
+          io.to(`chat:${chatRoomId}`).emit('member_left', {
+            userId: request.user.userId,
+            userName: displayName,
+            matchId: chatRoom.matchId
+          });
+
+          chatRoom.memberIds.forEach((memberId: string) => {
+            if (memberId !== request.user.userId.toString()) {
+              io.to(`user:${memberId}`).emit('global-new-message', sysPayload);
+              io.to(`user:${memberId}`).emit('global-member_left', {
+                userId: request.user.userId,
+                userName: displayName,
+                chatId: chatRoomId,
+                matchId: chatRoom.matchId
+              });
+            }
+          });
+          
+          // Push Notification
+          const { sendPushNotification } = require('../services/OneSignalService')
+          sendPushNotification(
+            chatRoom.memberIds.filter(id => id.toString() !== request.user.userId.toString()),
+            event?.name || 'Squad Update',
+            `${displayName} is ${status === 'going' ? 'confirmed' : 'unable to go'}.`,
+            { chatId: chatRoomId, matchId: chatRoom.matchId }
+          ).catch((err: any) => console.error('Push Error:', err))
+        }
+    }
 
     return { success: true }
   })

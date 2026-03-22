@@ -43,7 +43,7 @@ export async function sendWhatsApp(to: string, message: string) {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ to, message })
+        body: JSON.stringify({ number: to, message })
       })
 
       if (!response.ok) {

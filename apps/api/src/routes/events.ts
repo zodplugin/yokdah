@@ -9,17 +9,19 @@ export async function eventRoutes(fastify: FastifyInstance) {
     const { 
       city, 
       category, 
+      name,
       status = 'active',
       startDate,
       endDate,
       page = 1,
-      limit = 100
+      limit = 12
     } = request.query
 
     const query: any = { status }
     
     if (city) query.city = city
     if (category) query.category = category
+    if (name) query.name = { $regex: name, $options: 'i' }
     if (startDate || endDate) {
       query.date = {}
       if (startDate) query.date.$gte = new Date(startDate)
@@ -28,10 +30,11 @@ export async function eventRoutes(fastify: FastifyInstance) {
       query.date = { $gte: new Date() }
     }
 
+    const total = await Event.countDocuments(query)
     const events = await Event.find(query)
       .sort({ date: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
+      .skip((parseInt(page as string) - 1) * parseInt(limit as string))
+      .limit(parseInt(limit as string))
 
     const eventIds = events.map(e => e._id)
     const matchCounts = await MatchRequest.aggregate([
@@ -53,7 +56,15 @@ export async function eventRoutes(fastify: FastifyInstance) {
       lookingCount: countMap.get(event._id.toString()) || 0
     }))
 
-    return { events: eventsWithCount }
+    return { 
+      events: eventsWithCount,
+      pagination: {
+        total,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        pages: Math.ceil(total / parseInt(limit as string))
+      }
+    }
   })
 
   fastify.get('/cities', async () => {

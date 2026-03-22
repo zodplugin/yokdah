@@ -27,27 +27,19 @@ if (redisEnabled && process.env.REDIS_URI) {
       lazyConnect: false
     })
 
-    connection.on('connect', () => {
-      console.log('✓ Redis connected successfully')
-    })
-
-    connection.on('ready', () => {
-      console.log('✓ Redis ready')
-    })
-
-    connection.on('reconnecting', () => {
-      console.log('⚠ Redis reconnecting...')
-    })
-
+    connection.on('connect', () => console.log('✓ Redis connected successfully'))
+    connection.on('ready', () => console.log('✓ Redis ready'))
+    connection.on('reconnecting', () => console.log('⚠ Redis reconnecting...'))
     connection.on('error', (error: any) => {
-      if (error.message !== 'Connection is closed.' && error.message !== 'Stream connection ended' && error.message !== 'read ECONNRESET') {
+      if (
+        error.message !== 'Connection is closed.' &&
+        error.message !== 'Stream connection ended' &&
+        error.message !== 'read ECONNRESET'
+      ) {
         console.log('✗ Redis connection error:', error.message)
       }
     })
-
-    connection.on('close', () => {
-      console.log('⚠ Redis connection closed')
-    })
+    connection.on('close', () => console.log('⚠ Redis connection closed'))
 
     matchQueue = new Queue('match-queue', {
       connection,
@@ -55,10 +47,7 @@ if (redisEnabled && process.env.REDIS_URI) {
         removeOnComplete: 10,
         removeOnFail: 50,
         attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000
-        }
+        backoff: { type: 'exponential', delay: 1000 }
       }
     })
 
@@ -68,10 +57,7 @@ if (redisEnabled && process.env.REDIS_URI) {
         removeOnComplete: 10,
         removeOnFail: 50,
         attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000
-        }
+        backoff: { type: 'exponential', delay: 1000 }
       }
     })
 
@@ -81,10 +67,7 @@ if (redisEnabled && process.env.REDIS_URI) {
         removeOnComplete: 10,
         removeOnFail: 50,
         attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000
-        }
+        backoff: { type: 'exponential', delay: 1000 }
       }
     })
 
@@ -109,31 +92,58 @@ export function setupQueue() {
     return
   }
 
-  new Worker('match-queue', async (job) => {
-    const { eventId } = job.data
-    const { runMatching } = await import('../services/matchingService')
-    await runMatching(eventId)
-  }, { connection })
+  new Worker(
+    'match-queue',
+    async (job) => {
+      console.log('🔥 MATCH JOB RECEIVED:', job.data)
+      const { runMatching } = await import('../services/matchingService')
+      await runMatching(job.data.eventId)
+      console.log('✅ MATCH JOB DONE')
+    },
+    { connection }
+  )
 
-  new Worker('notification-queue', async (job) => {
-    const { type, data } = job.data
-    const { sendNotification } = await import('../services/notificationService')
-    await sendNotification(type, data)
-  }, { connection })
+  new Worker(
+    'notification-queue',
+    async (job) => {
+      const { type, data } = job.data
+      const { sendNotification } = await import('../services/notificationService')
+      await sendNotification(type, data)
+    },
+    { connection }
+  )
 
-  new Worker('event-queue', async (job) => {
-    const { type } = job.data
-    const { scrapeEvents } = await import('../services/eventService')
-    await scrapeEvents()
-  }, { connection })
+  new Worker(
+    'event-queue',
+    async (job) => {
+      const { scrapeEvents } = await import('../services/eventService')
+      await scrapeEvents()
+    },
+    { connection }
+  )
 }
 
 export async function addMatchJob(eventId: string) {
   if (matchQueue) {
-    await matchQueue.add('run-matching', { eventId }, { delay: 30000 })
+    // FIX: jobId unik per eventId → BullMQ otomatis skip duplikat
+    // job yang sudah ada di queue (delayed/waiting) tidak akan ditambah lagi
+    const jobId = `match-${eventId}`
+
+    const existingJob = await matchQueue.getJob(jobId)
+    if (existingJob) {
+      const state = await existingJob.getState()
+      // Kalau masih nunggu atau aktif, jangan tambah job baru
+      if (state === 'delayed' || state === 'waiting' || state === 'active') {
+        console.log(`⏭ Match job already queued for event ${eventId}, skipping`)
+        return
+      }
+    }
+
+    await matchQueue.add('run-matching', { eventId }, { jobId, delay: 5000 })
+    console.log(`📥 Match job added for event ${eventId}`)
   } else {
     const { runMatching } = await import('../services/matchingService')
-    setTimeout(() => runMatching(eventId), 30000)
+    setTimeout(() => runMatching(eventId), 5000)
   }
 }
 

@@ -50,7 +50,7 @@ async function start() {
     })
 
     await fastify.register(rateLimit, {
-      max: 100,
+      max: process.env.NODE_ENV === 'production' ? 100 : 1000,
       timeWindow: '1 minute'
     })
 
@@ -126,3 +126,4 @@ async function start() {
 }
 
 start()
+// Trigger TSX Hot Reload
