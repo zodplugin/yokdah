@@ -462,7 +462,7 @@ export default function BuddLanding() {
       <section className="hero">
         <div className="hero-badge">
           <span className="badge-dot"></span>
-          <span>Now live in 12 cities</span> — global rollout underway
+          <span>Now live in 12 cities</span> — expanding across Indonesia
         </div>
 
         <h1>Find the right people<br />for every <em>experience</em></h1>
@@ -623,14 +623,24 @@ export default function BuddLanding() {
 
       {/* LOGOS */}
       <div className="logos-section reveal">
-        <p className="logos-label">Trusted by communities in</p>
+        <p className="logos-label">People are using <em>Budd</em> to find buddies for events in</p>
         <div className="logos-row">
-          <span className="logo-pill">Amsterdam</span>
-          <span className="logo-pill">London</span>
-          <span className="logo-pill">Berlin</span>
           <span className="logo-pill">Jakarta</span>
-          <span className="logo-pill">New York</span>
-          <span className="logo-pill">Barcelona</span>
+          <span className="logo-pill">Bandung</span>
+          <span className="logo-pill">Surabaya</span>
+          <span className="logo-pill">Bali</span>
+          <span className="logo-pill">Medan</span>
+          <span className="logo-pill">Yogyakarta</span>
+        </div>
+        
+        {/* Placeholder for brand/partner logos */}
+        <div className="logos-row" style={{ marginTop: '32px', opacity: 0.6 }}>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
+          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
         </div>
       </div>
 
@@ -668,8 +678,8 @@ export default function BuddLanding() {
           </div>
           <div className="feature-cell">
             <div className="feature-icon"><Map size={20} /></div>
-            <div className="feature-name">Global events</div>
-            <p className="feature-desc">Concerts, parties, museum visits, padel, escape rooms — any experience, any city. We're adding more every week.</p>
+            <div className="feature-name">Events across Indonesia</div>
+            <p className="feature-desc">Concerts, parties, museum visits, padel, escape rooms — any experience, any city in Indonesia. We're adding more every week.</p>
           </div>
         </div>
       </section>
@@ -726,8 +736,8 @@ export default function BuddLanding() {
             <div className="tcard-author">
               <div className="tcard-avatar"><User size={16} /></div>
               <div>
-                <div className="tcard-name">Elise van D.</div>
-                <div className="tcard-meta">Amsterdam · Concerts</div>
+                <div className="tcard-name">Anisa S.</div>
+                <div className="tcard-meta">Jakarta · Concerts</div>
               </div>
             </div>
           </div>
@@ -739,12 +749,12 @@ export default function BuddLanding() {
               <Star size={12} fill="currentColor" strokeWidth={0} />
               <Star size={12} fill="currentColor" strokeWidth={0} />
             </div>
-            <p className="tcard-quote">"The vibe tags made all the difference. Matched with someone who was also a first-timer at DGTL — we navigated it together. Perfect."</p>
+            <p className="tcard-quote">"The vibe tags made all the difference. Matched with someone who was also a first-timer at a festival — we navigated it together. Perfect."</p>
             <div className="tcard-author">
               <div className="tcard-avatar"><User size={16} /></div>
               <div>
-                <div className="tcard-name">Ravi M.</div>
-                <div className="tcard-meta">London · Festivals</div>
+                <div className="tcard-name">Budi M.</div>
+                <div className="tcard-meta">Bandung · Festivals</div>
               </div>
             </div>
           </div>
@@ -760,8 +770,8 @@ export default function BuddLanding() {
             <div className="tcard-author">
               <div className="tcard-avatar"><User size={16} /></div>
               <div>
-                <div className="tcard-name">Aiko T.</div>
-                <div className="tcard-meta">Berlin · Activities</div>
+                <div className="tcard-name">Ayu T.</div>
+                <div className="tcard-meta">Bali · Activities</div>
               </div>
             </div>
           </div>

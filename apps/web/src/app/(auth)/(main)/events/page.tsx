@@ -1,26 +1,78 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, Flame, MapPin, Calendar, ChevronDown, Filter, X } from "lucide-react";
+import { Search, Flame, MapPin, Calendar, ChevronDown, Filter, X, Music, Headphones, Guitar, Sparkles, Target } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api";
 
 const CITIES = [
-    { name: "Amsterdam", country: "Netherlands" },
     { name: "Jakarta", country: "Indonesia" },
     { name: "Bandung", country: "Indonesia" },
     { name: "Depok", country: "Indonesia" },
     { name: "Surabaya", country: "Indonesia" },
     { name: "Bali", country: "Indonesia" },
-    { name: "Singapore", country: "Singapore" },
-    { name: "Tokyo", country: "Japan" },
-    { name: "Seoul", country: "South Korea" },
-    { name: "Bangkok", country: "Thailand" },
-    { name: "London", country: "UK" },
-    { name: "Berlin", country: "Germany" },
-    { name: "Barcelona", country: "Spain" },
-    { name: "New York", country: "USA" },
+    { name: "Ambon", country: "Indonesia" },
+    { name: "Karawang", country: "Indonesia" },
+    { name: "Sumbawa Besar", country: "Indonesia" },
+    { name: "Jakarta Pusat", country: "Indonesia" },
+    { name: "Tangerang", country: "Indonesia" },
+    { name: "Pekanbaru", country: "Indonesia" },
+    { name: "Cirebon", country: "Indonesia" },
+    { name: "Solo", country: "Indonesia" },
+    { name: "Kediri", country: "Indonesia" },
+    { name: "Balikpapan", country: "Indonesia" },
+    { name: "Medan", country: "Indonesia" },
+    { name: "Tulungagung", country: "Indonesia" },
+    { name: "Bogor", country: "Indonesia" },
+    { name: "Tegal", country: "Indonesia" },
+    { name: "Jombang", country: "Indonesia" },
+    { name: "Jambi", country: "Indonesia" },
+    { name: "Mojokerto", country: "Indonesia" },
+    { name: "Batam", country: "Indonesia" },
+    { name: "Cilacap", country: "Indonesia" },
+    { name: "Banjarbaru", country: "Indonesia" },
+    { name: "Jakarta Timur", country: "Indonesia" },
+    { name: "Jakarta Selatan", country: "Indonesia" },
+    { name: "Jakarta Utara", country: "Indonesia" },
+    { name: "Jakarta Barat", country: "Indonesia" },
+    { name: "Kota Tangerang", country: "Indonesia" },
+    { name: "Kab. Bogor", country: "Indonesia" },
 ];
+
+const EventImage = ({ src, alt, category }: { src?: string; alt: string; category?: string }) => {
+    const [error, setError] = useState(false);
+    
+    const getCategoryIcon = (cat?: string) => {
+        const className = "text-[var(--muted)] opacity-40";
+        switch (cat?.toLowerCase()) {
+            case 'concert': return <Music size={48} className={className} />;
+            case 'festival': return <Guitar size={48} className={className} />;
+            case 'activity': return <Target size={48} className={className} />;
+            case 'sport': return <Target size={48} className={className} />;
+            case 'party': return <Headphones size={48} className={className} />;
+            default: return <Sparkles size={48} className={className} />;
+        }
+    };
+
+    if (!src || error) {
+        return (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[var(--bg2)] to-[var(--bg3)] relative overflow-hidden">
+                <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(var(--text) 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
+                {getCategoryIcon(category)}
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted)] mt-2 opacity-50">{category || 'Event'}</span>
+            </div>
+        );
+    }
+
+    return (
+        <img 
+            src={src} 
+            alt={alt} 
+            onError={() => setError(true)}
+            className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105" 
+        />
+    );
+};
 
 const CATEGORIES = [
     { name: "All", value: "" },
@@ -252,11 +304,7 @@ export default function EventsPage() {
                     {events.map((ev) => (
                         <Link href={`/events/${ev.id}`} key={ev.id} className="group flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-[16px] overflow-hidden hover:border-[var(--border2)] transition-all hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:-translate-y-1">
                             <div className="h-44 flex items-center justify-center relative overflow-hidden bg-[var(--bg2)] border-b border-[var(--border)]">
-                                {ev.coverImage ? (
-                                    <img src={ev.coverImage} alt={ev.name} className="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition-transform duration-700" />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-tr from-[var(--bg2)] to-[var(--bg3)] absolute inset-0"></div>
-                                )}
+                                <EventImage src={ev.coverImage} alt={ev.name} category={ev.category} />
                                 <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             </div>
                             <div className="p-5 flex-1 flex flex-col">
