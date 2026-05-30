@@ -76,7 +76,7 @@ function EventImage({ src, alt, category }: { src?: string; alt: string; categor
 
 export default function LandingEventPreview({
   isLoggedIn,
-  city = "DKI Jakarta",
+  city = "Jakarta",
   limit = 12,
 }: {
   isLoggedIn: boolean;

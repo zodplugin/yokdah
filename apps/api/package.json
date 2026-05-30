@@ -12,7 +12,10 @@
     "scrape:dewatiket": "tsx scripts/scrape-dewatiket.ts",
     "scrape:kiostix": "tsx scripts/scrape-kiostix.ts",
     "scrape:loket": "tsx scripts/scrape-loket.ts",
-    "scrape:all": "npm run scrape:dewatiket && npm run scrape:kiostix && npm run scrape:loket"
+    "scrape:megatix": "tsx scripts/scrape-megatix.ts",
+    "scrape:tixid": "tsx scripts/scrape-tixid.ts",
+    "scrape:goers": "tsx scripts/scrape-goers.ts",
+    "scrape:all": "npm run scrape:dewatiket && npm run scrape:kiostix && npm run scrape:loket && npm run scrape:megatix && npm run scrape:tixid && npm run scrape:goers"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1009.0",

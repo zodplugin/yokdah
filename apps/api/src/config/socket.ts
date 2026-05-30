@@ -9,13 +9,24 @@ const activeUsers = new Map<string, number>()
 export function setupSocket(fastify: any) {
   const httpServer = fastify.server
   let redisClient: Redis | null = null
+  const redisEnabled = process.env.REDIS_ENABLED !== 'false'
   
-  if (process.env.REDIS_URI && process.env.REDIS_URI !== 'disable') {
+  if (redisEnabled && process.env.REDIS_URI && process.env.REDIS_URI !== 'disable') {
     try {
-      redisClient = new Redis(process.env.REDIS_URI)
+      redisClient = new Redis(process.env.REDIS_URI, {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false
+      })
+
+      redisClient.on('error', (err) => {
+        // Prevent "[ioredis] Unhandled error event" spam/crash when DNS/connection fails.
+        console.log('Redis connection error (socket.io):', err?.message || err)
+      })
     } catch (error) {
       console.log('Redis connection failed for socket.io, running without it')
     }
+  } else if (!redisEnabled) {
+    console.log('Redis is disabled for socket.io')
   }
 
   io = new SocketIOServer(httpServer, {

@@ -6,9 +6,9 @@ import { uploadToR2 } from '../utils/storage'
 
 export async function eventRoutes(fastify: FastifyInstance) {
   fastify.get('/', async (request: any) => {
-    const { 
-      city, 
-      category, 
+    const {
+      city,
+      category,
       name,
       status = 'active',
       startDate,
@@ -18,7 +18,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
     } = request.query
 
     const query: any = { status }
-    
+
     if (city) query.city = city
     if (category) query.category = category
     if (name) query.name = { $regex: name, $options: 'i' }
@@ -56,7 +56,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
       lookingCount: countMap.get(event._id.toString()) || 0
     }))
 
-    return { 
+    return {
       events: eventsWithCount,
       pagination: {
         total,
@@ -68,7 +68,10 @@ export async function eventRoutes(fastify: FastifyInstance) {
   })
 
   fastify.get('/cities', async () => {
-    const cities = await Event.distinct('city', { status: 'active' })
+    const cities = await Event.distinct('city', {
+      status: 'active',
+      date: { $gte: new Date() }
+    })
     return { cities: cities.sort() }
   })
 
