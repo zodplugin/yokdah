@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { User, Music, Headphones, Guitar, Target, MessageSquare, Sparkles, Lock, Zap, Map, Star, Flame } from "lucide-react";
 import HowItWorksCanvas from "../components/HowItWorksCanvas";
+import LandingEventPreview from "../components/LandingEventPreview";
 
 export default function BuddLanding() {
   const [scrolled, setScrolled] = useState(false);
@@ -205,6 +206,8 @@ export default function BuddLanding() {
             </div>
           </div>
         </section>
+
+        <LandingEventPreview isLoggedIn={isLoggedIn} />
 
         <section id="features" className="py-24 md:py-32 px-6 max-w-6xl mx-auto">
           <div className="text-center mb-16 md:mb-20">
