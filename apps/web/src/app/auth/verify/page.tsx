@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -9,7 +9,6 @@ type VerifyStatus = "loading" | "success" | "error";
 
 export default function VerifyPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { loginWithToken } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("loading");
   const [message, setMessage] = useState("");
@@ -22,7 +21,9 @@ export default function VerifyPage() {
     }
 
     const verifyToken = async () => {
-      const token = searchParams.get("token");
+      const token = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("token")
+        : null;
 
       if (!token) {
         setStatus("error");
@@ -71,7 +72,7 @@ export default function VerifyPage() {
 
     verifyToken();
     isVerifiedRef.current = true;
-  }, [searchParams, loginWithToken, router]);
+  }, [loginWithToken, router]);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50 text-slate-900 font-sans">

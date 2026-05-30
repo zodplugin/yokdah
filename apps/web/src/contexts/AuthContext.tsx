@@ -21,6 +21,7 @@ interface User {
   isVerified: boolean;
   eventsAttended: number;
   whatsappNumber: string;
+  isOnboardingComplete?: boolean;
 }
 
 interface AuthContextType {
@@ -28,7 +29,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ token: string; user?: User }>;
   loginWithToken: (token: string, user: User) => void;
   register: (email: string, whatsappNumber: string) => Promise<{ token: string }>;
   completeOnboarding: (data: OnboardingData) => Promise<void>;

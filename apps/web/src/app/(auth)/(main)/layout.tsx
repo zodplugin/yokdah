@@ -123,11 +123,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                                             <item.icon size={18} />
                                             {item.name}
                                         </div>
-                                        {item.badge && (
-                                            <span className="bg-[#ef4444] text-white text-[11px] font-bold px-2 py-0.5 rounded-[100px] leading-none flex items-center justify-center">
-                                                {item.badge}
-                                            </span>
-                                        )}
                                     </Link>
                                 );
                             })}
@@ -181,11 +176,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                                 <item.icon size={22} strokeWidth={active ? 2.5 : 2} />
                             </div>
                             <span className="text-[10px] font-medium mt-1 uppercase tracking-[0.05em]">{item.name.split(' ')[0]}</span>
-                            {item.badge && (
-                                <span className="absolute top-1 right-2 bg-[#ef4444] text-white text-[10px] font-bold min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center border-2 border-[var(--surface)]">
-                                    {item.badge}
-                                </span>
-                            )}
                         </Link>
                     );
                 })}

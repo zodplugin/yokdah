@@ -4,12 +4,11 @@
 import { useState, useEffect } from "react";
 import { ArrowRight, ArrowLeft, Camera, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { uploadClient } from "@/lib/upload";
 
 export default function Onboarding() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const totalSteps = 4;
@@ -155,7 +154,9 @@ export default function Onboarding() {
                 localStorage.removeItem('tempToken');
                 localStorage.removeItem('tempUser');
                 // Redirect to the original destination or default to events
-                const redirect = searchParams.get('redirect');
+                const redirect = typeof window !== 'undefined'
+                    ? new URLSearchParams(window.location.search).get('redirect')
+                    : null;
                 router.push(redirect || '/events');
             } else {
                 const errorData = await completeResponse.json();

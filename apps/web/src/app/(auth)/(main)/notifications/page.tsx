@@ -77,14 +77,14 @@ export default function NotificationsPage() {
             case 'account_locked':
                 return { icon: ShieldAlert, color: "text-[#ef4444]", bg: "bg-[#fee2e2]", link: "/profile" };
             default:
-                return { icon: Bell, color: "text-[var(--muted2)]", bg: "bg-[var(--bg3)]", link: "/matches" };
+                return { icon: Bell, color: "text-slate-500", bg: "bg-slate-100", link: "/matches" };
         }
     };
 
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <div className="animate-spin w-8 h-8 border-2 border-[var(--border)] border-t-[var(--accent)] rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-2 border-slate-200 border-t-emerald-500 rounded-full"></div>
             </div>
         );
     }
@@ -93,21 +93,21 @@ export default function NotificationsPage() {
         <div className="p-6 md:p-12 max-w-4xl mx-auto min-h-screen">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
                 <div>
-                    <h1 className="font-serif text-[clamp(36px,5vw,48px)] leading-[1.1] mb-2 tracking-[-0.02em]">Your <em>notifications</em></h1>
-                    <p className="text-[15px] text-[var(--muted2)]">Stay updated on your matches and events.</p>
+                    <h1 className="font-sans font-extrabold tracking-tight text-[clamp(36px,5vw,48px)] leading-[1.1] mb-2 tracking-[-0.02em] text-slate-900">Your <em>notifications</em></h1>
+                    <p className="text-[15px] text-slate-500">Stay updated on your matches and events.</p>
                 </div>
                 {unreadCount > 0 && (
                     <button
                         onClick={markAllRead}
-                        className="text-[13px] font-medium text-[var(--text)] hover:text-[var(--accent-dark)] flex items-center gap-1.5 transition-colors bg-[var(--surface)] border border-[var(--border)] px-4 py-2 rounded-[10px] hover:bg-[var(--bg2)] self-start md:self-auto"
+                        className="text-[13px] font-medium text-slate-900 hover:text-emerald-600 flex items-center gap-1.5 transition-colors bg-white border border-slate-200 px-4 py-2 rounded-[10px] hover:bg-slate-50 self-start md:self-auto"
                     >
                         <Check size={16} /> Mark all read
                     </button>
                 )}
             </div>
 
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[24px] shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden">
-                <div className="divide-y divide-[var(--border)]">
+            <div className="bg-white border border-slate-200 rounded-[24px] shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden">
+                <div className="divide-y divide-slate-200">
                     {notifications.map((notif) => {
                         const config = getIconConfig(notif.type);
                         const link = notif.data?.matchId ? `/matches/${notif.data.matchId}` : (notif.data?.chatRoomId ? `/matches/${notif.data.chatRoomId}` : config.link);
@@ -116,19 +116,19 @@ export default function NotificationsPage() {
                             <div
                                 key={notif._id}
                                 onClick={() => markAsRead(notif._id)}
-                                className={`p-5 md:p-6 transition-colors flex gap-4 md:gap-5 ${!notif.isRead ? 'bg-[var(--bg)] hover:bg-[var(--bg2)] cursor-pointer' : 'bg-[var(--surface)] opacity-70'}`}
+                                className={`p-5 md:p-6 transition-colors flex gap-4 md:gap-5 ${!notif.isRead ? 'bg-slate-50 hover:bg-slate-100 cursor-pointer' : 'bg-white opacity-70'}`}
                             >
                                 <div className={`w-12 h-12 flex-shrink-0 rounded-[14px] flex items-center justify-center ${config.bg} ${config.color} shadow-sm border border-[rgba(0,0,0,0.05)] mt-0.5`}>
                                     <config.icon size={20} />
                                 </div>
                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-4 mb-1">
-                                        <Link href={link} className={`text-[15px] font-medium truncate hover:text-[var(--accent-text)] transition-colors ${!notif.isRead ? 'text-[var(--text)]' : 'text-[var(--muted2)]'}`}>
+                                        <Link href={link} className={`text-[15px] font-medium truncate hover:text-emerald-600 transition-colors ${!notif.isRead ? 'text-slate-900' : 'text-slate-500'}`}>
                                             {notif.title}
                                         </Link>
-                                        <span className="text-[12px] text-[var(--muted)] flex-shrink-0 whitespace-nowrap">{getTimeAgo(notif.createdAt)}</span>
+                                        <span className="text-[12px] text-slate-400 flex-shrink-0 whitespace-nowrap">{getTimeAgo(notif.createdAt)}</span>
                                     </div>
-                                    <p className="text-[14px] text-[var(--muted2)] line-clamp-1">
+                                    <p className="text-[14px] text-slate-500 line-clamp-1">
                                         {notif.message}
                                     </p>
                                 </div>
@@ -142,7 +142,7 @@ export default function NotificationsPage() {
                     })}
 
                     {notifications.length === 0 && (
-                        <div className="p-12 text-center text-[var(--muted2)]">
+                        <div className="p-12 text-center text-slate-500">
                             <Bell size={32} className="mx-auto mb-4 opacity-50" />
                             <p className="text-[15px] font-medium">No notifications yet.</p>
                             <p className="text-[14px]">When you join events, they'll appear here.</p>
