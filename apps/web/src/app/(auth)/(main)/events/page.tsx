@@ -5,35 +5,10 @@ import { Search, Flame, MapPin, Calendar, ChevronDown, Filter, X, Music, Headpho
 import Link from "next/link";
 import api from "@/lib/api";
 
-const CITIES = [
-    { name: "DKI Jakarta", country: "Indonesia" },
-    { name: "Jawa Barat", country: "Indonesia" },
-    { name: "Jawa Tengah", country: "Indonesia" },
-    { name: "DI Yogyakarta", country: "Indonesia" },
-    { name: "Jawa Timur", country: "Indonesia" },
-    { name: "Banten", country: "Indonesia" },
-    { name: "Bali", country: "Indonesia" },
-    { name: "Sumatera Utara", country: "Indonesia" },
-    { name: "Sumatera Barat", country: "Indonesia" },
-    { name: "Sumatera Selatan", country: "Indonesia" },
-    { name: "Riau", country: "Indonesia" },
-    { name: "Kepulauan Riau", country: "Indonesia" },
-    { name: "Lampung", country: "Indonesia" },
-    { name: "Kalimantan Barat", country: "Indonesia" },
-    { name: "Kalimantan Tengah", country: "Indonesia" },
-    { name: "Kalimantan Selatan", country: "Indonesia" },
-    { name: "Kalimantan Timur", country: "Indonesia" },
-    { name: "Sulawesi Selatan", country: "Indonesia" },
-    { name: "Sulawesi Utara", country: "Indonesia" },
-    { name: "Nusa Tenggara Barat", country: "Indonesia" },
-    { name: "Nusa Tenggara Timur", country: "Indonesia" },
-    { name: "Maluku", country: "Indonesia" },
-    { name: "Papua", country: "Indonesia" },
-];
 
 const EventImage = ({ src, alt, category }: { src?: string; alt: string; category?: string }) => {
     const [error, setError] = useState(false);
-    
+
     const getCategoryIcon = (cat?: string) => {
         const className = "text-slate-400 opacity-40";
         switch (cat?.toLowerCase()) {
@@ -57,11 +32,11 @@ const EventImage = ({ src, alt, category }: { src?: string; alt: string; categor
     }
 
     return (
-        <img 
-            src={src} 
-            alt={alt} 
+        <img
+            src={src}
+            alt={alt}
             onError={() => setError(true)}
-            className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105" 
+            className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105"
         />
     );
 };
@@ -78,12 +53,34 @@ export default function EventsPage() {
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCity, setSelectedCity] = useState("DKI Jakarta");
+    const [selectedCity, setSelectedCity] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [showCityDropdown, setShowCityDropdown] = useState(false);
     const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
     const [pagination, setPagination] = useState<any>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [availableCities, setAvailableCities] = useState<string[]>([]);
+    const [citiesLoading, setCitiesLoading] = useState(true);
+
+    // Fetch available cities from active events
+    useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                setCitiesLoading(true);
+                const res: any = await api.get('/api/events/cities');
+                const cities: string[] = res.cities || [];
+                setAvailableCities(cities);
+                if (cities.length > 0 && !selectedCity) {
+                    setSelectedCity(cities[0]);
+                }
+            } catch (e) {
+                console.error('Failed to fetch cities:', e);
+            } finally {
+                setCitiesLoading(false);
+            }
+        };
+        fetchCities();
+    }, []);
 
     const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -204,17 +201,30 @@ export default function EventsPage() {
                     {/* City Dropdown */}
                     {showCityDropdown && (
                         <div className="absolute z-50 right-0 top-full mt-2 w-[280px] bg-white border border-slate-200 rounded-[20px] shadow-2xl shadow-slate-200/50 backdrop-blur-xl bg-white/95 overflow-hidden">
+                            <div className="px-4 pt-3 pb-2 border-b border-slate-100">
+                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Available Locations</span>
+                            </div>
                             <div className="max-h-[300px] overflow-y-auto">
-                                {CITIES.map((city) => (
-                                    <button
-                                        key={city.name}
-                                        onClick={() => handleCitySelect(city.name)}
-                                        className={`w-full text-left px-4 py-3 text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-between ${selectedCity === city.name ? 'bg-emerald-50 text-emerald-600' : 'text-slate-900'}`}
-                                    >
-                                        <span>{city.name}</span>
-                                        <span className="text-[12px] text-slate-400 ">{city.country}</span>
-                                    </button>
-                                ))}
+                                {citiesLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="w-5 h-5 border-2 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
+                                    </div>
+                                ) : availableCities.length === 0 ? (
+                                    <div className="px-4 py-6 text-[13px] text-slate-400 text-center">No cities found</div>
+                                ) : (
+                                    availableCities.map((city) => (
+                                        <button
+                                            key={city}
+                                            onClick={() => handleCitySelect(city)}
+                                            className={`w-full text-left px-4 py-3 text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-between ${selectedCity === city ? 'bg-emerald-50 text-emerald-600' : 'text-slate-900'}`}
+                                        >
+                                            <span>{city}</span>
+                                            {selectedCity === city && (
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            )}
+                                        </button>
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}
