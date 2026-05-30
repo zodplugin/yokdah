@@ -95,7 +95,7 @@ export default function RateSquad() {
 
                     <div className="flex items-center justify-between pt-6 border-t border-[var(--border)] animate-fadeUp" style={{ animationDelay: '0.3s' }}>
                         <Link href="/events" className="text-[14px] font-medium text-[var(--muted2)] hover:text-[var(--text)] transition-colors">Skip rating</Link>
-                        <button type="submit" className="bg-[var(--accent)] hover:bg-[var(--accent2)] text-[var(--text)] font-medium text-[15px] py-4 px-8 rounded-[12px] flex items-center gap-2 transition-all shadow-[0_4px_24px_rgba(184,240,64,0.25)] hover:shadow-[0_4px_32px_rgba(184,240,64,0.35)] hover:-translate-y-0.5">
+                        <button type="submit" className="bg-emerald-500 hover:bg-[var(--accent2)] text-[var(--text)] font-medium text-[15px] py-4 px-8 rounded-[12px] flex items-center gap-2 transition-all shadow-[0_4px_24px_rgba(184,240,64,0.25)] hover:shadow-[0_4px_32px_rgba(184,240,64,0.35)] hover:-translate-y-0.5">
                             Submit all ratings <CheckCircle size={18} />
                         </button>
                     </div>

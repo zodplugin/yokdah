@@ -83,7 +83,7 @@ export default function AuthLayout({
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-10 h-10 border-3 border-[var(--border)] border-t-[var(--accent)] rounded-full"></div>
+        <div className="animate-spin w-10 h-10 border-3 border-slate-200 border-t-emerald-500 rounded-full"></div>
       </div>
     );
   }
@@ -99,7 +99,7 @@ export default function AuthLayout({
               <div 
                   key={t.id} 
                   onClick={() => t.link ? router.push(t.link) : undefined}
-                  className={`bg-[var(--text)] text-[var(--bg)] px-5 py-3 rounded-[100px] text-[14px] font-medium shadow-xl animate-fadeUp pointer-events-auto ${t.link ? 'cursor-pointer hover:bg-[var(--accent)] hover:text-[var(--text)] transition-colors' : ''}`}
+                  className={`bg-slate-900 text-white px-5 py-3 rounded-[100px] text-[14px] font-medium shadow-xl animate-fadeUp pointer-events-auto ${t.link ? 'cursor-pointer hover:bg-emerald-500 hover:text-white transition-colors' : ''}`}
               >
                   {t.msg}
               </div>

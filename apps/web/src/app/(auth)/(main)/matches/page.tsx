@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Clock, ArrowRight, X, ArrowLeft, Search, User, Calendar, Hash, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Users, Clock, ArrowRight, X, ArrowLeft, Search, User, Calendar, Hash, CheckCircle2, AlertCircle, Loader2, Music, Headphones, Guitar, Sparkles, Target, Filter, ChevronDown, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -12,6 +12,9 @@ interface Event {
   date: string;
   category: string;
   city: string;
+  coverImage?: string;
+  image?: string;
+  venue?: string;
 }
 
 interface MatchRequest {
@@ -22,6 +25,9 @@ interface MatchRequest {
     date: string;
     category: string;
     city: string;
+    venue?: string;
+    coverImage?: string;
+    image?: string;
   };
   status: 'pending' | 'matched' | 'confirmed' | 'cancelled';
   groupSize: string;
@@ -63,6 +69,41 @@ interface ApiMatchResponse {
   chatRoomId: string;
 }
 
+
+const EventImage = ({ src, alt, category }: { src?: string; alt: string; category?: string }) => {
+  const [error, setError] = useState(false);
+
+  const getCategoryIcon = (cat?: string) => {
+    const className = "text-slate-400 opacity-40";
+    switch (cat?.toLowerCase()) {
+      case 'concert': return <Music size={32} className={className} />;
+      case 'festival': return <Guitar size={32} className={className} />;
+      case 'activity': return <Target size={32} className={className} />;
+      case 'sport': return <Target size={32} className={className} />;
+      case 'party': return <Headphones size={32} className={className} />;
+      default: return <Sparkles size={32} className={className} />;
+    }
+  };
+
+  if (!src || error) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(var(--text) 1px, transparent 1px)', backgroundSize: '12px 12px' }}></div>
+        {getCategoryIcon(category)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setError(true)}
+      className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 group-hover:scale-105"
+    />
+  );
+};
+
 export default function MatchesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -83,6 +124,9 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(false);
   const [activeMatches, setActiveMatches] = useState<ApiMatchResponse[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   // Fetch event for find squad form
   const [event, setEvent] = useState<Event | null>(null);
@@ -92,11 +136,15 @@ export default function MatchesPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await api.get<ApiRequestsResponse>(`/api/matches/requests?status=pending,matched,confirmed&page=${currentPage}&limit=10`);
-        setRequestsData(response);
+        const [activeResponse, pendingResponse] = await Promise.all([
+          api.get<ApiRequestsResponse>(`/api/matches/requests?status=matched,confirmed&limit=50`),
+          api.get<ApiRequestsResponse>(`/api/matches/requests?status=pending&page=${currentPage}&limit=9`)
+        ]);
 
-        // Extract matches from requests
-        const matches = response.requests
+        setRequestsData(pendingResponse);
+
+        // Extract matches from active requests
+        const matches = activeResponse.requests
           .filter((r): r is MatchRequest & { status: 'matched' | 'confirmed' } => (r.status === 'matched' || r.status === 'confirmed') && r.eventId != null)
           .map((r): ApiMatchResponse => ({
             id: r.matchId || r._id,
@@ -143,11 +191,12 @@ export default function MatchesPage() {
     try {
       await api.delete(`/api/matches/requests/${requestId}`);
       // Refresh data on current page
-      const response = await api.get<ApiRequestsResponse>(`/api/matches/requests?status=pending,matched,confirmed&page=${currentPage}&limit=10`);
-      setRequestsData(response);
+      const pendingResponse = await api.get<ApiRequestsResponse>(`/api/matches/requests?status=pending&page=${currentPage}&limit=9`);
+      setRequestsData(pendingResponse);
 
       // Update active matches as well
-      const matches = response.requests
+      const activeResponse = await api.get<ApiRequestsResponse>(`/api/matches/requests?status=matched,confirmed&limit=50`);
+      const matches = activeResponse.requests
         .filter((r): r is MatchRequest & { status: 'matched' | 'confirmed' } => (r.status === 'matched' || r.status === 'confirmed') && r.eventId != null)
         .map((r): ApiMatchResponse => ({
           id: r.matchId || r._id,
@@ -217,7 +266,7 @@ export default function MatchesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-10 h-10 border-3 border-[var(--border)] border-t-[var(--accent)] rounded-full"></div>
+        <div className="animate-spin w-10 h-10 border-3 border-slate-200 border-t-[#10b981] rounded-full"></div>
       </div>
     );
   }
@@ -229,7 +278,7 @@ export default function MatchesPage() {
         {/* Back Button */}
         <Link
           href={`/events/${eventId}`}
-          className="inline-flex items-center gap-2 text-[var(--muted2)] hover:text-[var(--text)] transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors mb-8"
         >
           <ArrowLeft size={18} />
           Back to event
@@ -237,24 +286,24 @@ export default function MatchesPage() {
 
         {/* Event Header */}
         <div className="mb-10">
-          <div className="text-[11px] uppercase tracking-[0.08em] font-medium text-[var(--muted)] bg-[var(--bg2)] px-2.5 py-1 rounded-[4px] inline-block mb-3">
+          <div className="text-[11px] uppercase tracking-[0.08em] font-medium text-slate-500 bg-slate-50 px-2.5 py-1 rounded-[4px] inline-block mb-3">
             {event.category}
           </div>
-          <h1 className="font-serif text-[clamp(28px,4vw,40px)] leading-[1.1] mb-2 tracking-[-0.02em]">
+          <h1 className="font-sans font-extrabold tracking-tight text-[clamp(28px,4vw,40px)] leading-[1.1] mb-2 tracking-[-0.02em]">
             Find your <em>squad</em>
           </h1>
-          <p className="text-[15px] text-[var(--muted2)]">
+          <p className="text-[15px] text-slate-400">
             Join {event.name} · {formatEventDate(event.date)} · {event.city}
           </p>
         </div>
 
         {/* Group Size Selection */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 md:p-8 mb-6">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 md:p-8 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <Users size={24} className="text-[var(--accent-dark)]" />
-            <h2 className="font-serif text-[22px]">Group Size</h2>
+            <Users size={24} className="text-emerald-600" />
+            <h2 className="font-sans font-extrabold tracking-tight text-[22px]">Group Size</h2>
           </div>
-          <p className="text-[14px] text-[var(--muted2)] mb-6">
+          <p className="text-[14px] text-slate-400 mb-6">
             How many people in your squad?
           </p>
           <div className="flex flex-wrap gap-3">
@@ -262,9 +311,9 @@ export default function MatchesPage() {
               <button
                 key={size}
                 onClick={() => setGroupSize(size)}
-                className={`px-6 py-3 rounded-[12px] font-medium text-[15px] transition-all ${groupSize === size
-                    ? "bg-[var(--accent)] text-[var(--accent-text)] border-2 border-[var(--accent)] shadow-[0_4px_16px_rgba(184,240,64,0.3)]"
-                    : "bg-[var(--bg)] text-[var(--text)] border-2 border-[var(--border)] hover:border-[var(--border2)]"
+                className={`px-6 py-3 rounded-full font-medium text-[15px] transition-all ${groupSize === size
+                  ? "bg-emerald-500 text-white border-2 border-emerald-500 shadow-lg shadow-emerald-500/25"
+                  : "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-300"
                   }`}
               >
                 {size}
@@ -274,12 +323,12 @@ export default function MatchesPage() {
         </div>
 
         {/* Gender Preference */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 md:p-8 mb-6">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 md:p-8 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <User size={24} className="text-[var(--accent-dark)]" />
-            <h2 className="font-serif text-[22px]">Gender Preference</h2>
+            <User size={24} className="text-emerald-600" />
+            <h2 className="font-sans font-extrabold tracking-tight text-[22px]">Gender Preference</h2>
           </div>
-          <p className="text-[14px] text-[var(--muted2)] mb-6">
+          <p className="text-[14px] text-slate-400 mb-6">
             Who do you want to match with?
           </p>
           <div className="flex flex-wrap gap-3">
@@ -287,9 +336,9 @@ export default function MatchesPage() {
               <button
                 key={pref}
                 onClick={() => setGenderPreference(pref)}
-                className={`px-6 py-3 rounded-[12px] font-medium text-[15px] transition-all capitalize ${genderPreference === pref
-                    ? "bg-[var(--accent)] text-[var(--accent-text)] border-2 border-[var(--accent)] shadow-[0_4px_16px_rgba(184,240,64,0.3)]"
-                    : "bg-[var(--bg)] text-[var(--text)] border-2 border-[var(--border)] hover:border-[var(--border2)]"
+                className={`px-6 py-3 rounded-full font-medium text-[15px] transition-all capitalize ${genderPreference === pref
+                  ? "bg-emerald-500 text-white border-2 border-emerald-500 shadow-lg shadow-emerald-500/25"
+                  : "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-300"
                   }`}
               >
                 {pref}
@@ -299,47 +348,47 @@ export default function MatchesPage() {
         </div>
 
         {/* Age Range */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 md:p-8 mb-6">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 md:p-8 mb-6">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar size={24} className="text-[var(--accent-dark)]" />
-            <h2 className="font-serif text-[22px]">Age Range</h2>
+            <Calendar size={24} className="text-emerald-600" />
+            <h2 className="font-sans font-extrabold tracking-tight text-[22px]">Age Range</h2>
           </div>
-          <p className="text-[14px] text-[var(--muted2)] mb-6">
+          <p className="text-[14px] text-slate-400 mb-6">
             Preferred age range for your squad.
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[13px] text-[var(--muted)] font-medium mb-2 block">Min Age</label>
+              <label className="text-[13px] text-slate-500 font-medium mb-2 block">Min Age</label>
               <input
                 type="number"
                 min="18"
                 max="99"
                 value={ageMin}
                 onChange={(e) => setAgeMin(parseInt(e.target.value))}
-                className="w-full bg-[var(--bg)] border-2 border-[var(--border)] rounded-[10px] py-3 px-4 text-[15px] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                className="w-full bg-white border-2 border-slate-200 rounded-full py-3 px-4 text-[15px] focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
             <div>
-              <label className="text-[13px] text-[var(--muted)] font-medium mb-2 block">Max Age</label>
+              <label className="text-[13px] text-slate-500 font-medium mb-2 block">Max Age</label>
               <input
                 type="number"
                 min="18"
                 max="99"
                 value={ageMax}
                 onChange={(e) => setAgeMax(parseInt(e.target.value))}
-                className="w-full bg-[var(--bg)] border-2 border-[var(--border)] rounded-[10px] py-3 px-4 text-[15px] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                className="w-full bg-white border-2 border-slate-200 rounded-full py-3 px-4 text-[15px] focus:outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
         </div>
 
         {/* Vibe Tags */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 md:p-8 mb-8">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 md:p-8 mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <Hash size={24} className="text-[var(--accent-dark)]" />
-            <h2 className="font-serif text-[22px]">Vibe Tags</h2>
+            <Hash size={24} className="text-emerald-600" />
+            <h2 className="font-sans font-extrabold tracking-tight text-[22px]">Vibe Tags</h2>
           </div>
-          <p className="text-[14px] text-[var(--muted2)] mb-6">
+          <p className="text-[14px] text-slate-400 mb-6">
             Select your squad&apos;s vibe (optional).
           </p>
           <div className="flex flex-wrap gap-3">
@@ -353,9 +402,9 @@ export default function MatchesPage() {
                     setVibeTags([...vibeTags, tag]);
                   }
                 }}
-                className={`px-4 py-2 rounded-[10px] font-medium text-[14px] transition-all capitalize ${vibeTags.includes(tag)
-                    ? "bg-[var(--accent)] text-[var(--accent-text)] border-2 border-[var(--accent)]"
-                    : "bg-[var(--bg)] text-[var(--text)] border-2 border-[var(--border)] hover:border-[var(--border2)]"
+                className={`px-4 py-2 rounded-full font-medium text-[14px] transition-all capitalize ${vibeTags.includes(tag)
+                  ? "bg-emerald-500 text-white border-2 border-emerald-500"
+                  : "bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-300"
                   }`}
               >
                 #{tag}
@@ -366,7 +415,7 @@ export default function MatchesPage() {
 
         {/* Error Message */}
         {errorMessage && (
-          <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-[12px] text-red-700 mb-6">
+          <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-full text-red-700 mb-6">
             <AlertCircle size={18} />
             <span className="text-[14px]">{errorMessage}</span>
           </div>
@@ -374,7 +423,7 @@ export default function MatchesPage() {
 
         {/* Success Message */}
         {submitSuccess && (
-          <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-[12px] text-green-700 mb-6">
+          <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-full text-green-700 mb-6">
             <CheckCircle2 size={18} />
             <span className="text-[14px]">Your request has been submitted! Redirecting...</span>
           </div>
@@ -384,9 +433,9 @@ export default function MatchesPage() {
         <button
           onClick={handleSubmit}
           disabled={submitting || submitSuccess}
-          className={`w-full font-medium text-[16px] py-4 px-6 rounded-[12px] transition-all flex items-center justify-center gap-2 ${submitting || submitSuccess
-              ? "bg-[var(--border)] text-[var(--muted)] cursor-not-allowed"
-              : "bg-[var(--accent)] hover:bg-[var(--accent2)] text-[var(--accent-text)] hover:shadow-[0_4px_24px_rgba(184,240,64,0.25)]"
+          className={`w-full font-medium text-[16px] py-4 px-6 rounded-full transition-all flex items-center justify-center gap-2 ${submitting || submitSuccess
+            ? "bg-[#e2e8f0] text-slate-500 cursor-not-allowed"
+            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5"
             }`}
         >
           {submitting ? (
@@ -409,81 +458,178 @@ export default function MatchesPage() {
   return (
     <div className="p-6 md:p-12 max-w-5xl mx-auto min-h-screen">
       <div className="mb-10">
-        <h1 className="font-serif text-[clamp(36px,5vw,48px)] leading-[1.1] mb-2 tracking-[-0.02em]">
+        <h1 className="font-sans font-extrabold tracking-tight text-[clamp(36px,5vw,48px)] leading-[1.1] mb-2 tracking-[-0.02em]">
           Your <em>squads</em>
         </h1>
-        <p className="text-[15px] text-[var(--muted2)]">Active groups and pending matching requests.</p>
+        <p className="text-[15px] text-slate-400">Active groups and pending matching requests.</p>
       </div>
 
       <div className="space-y-12">
+
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-10 pb-6 border-b border-slate-200">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search your events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-[100px] py-2.5 pl-11 pr-4 text-[14px] focus:outline-none focus:border-emerald-500 transition-colors placeholder:text-slate-400 font-medium text-slate-900"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300 rounded-[100px] text-[13px] font-medium transition-all"
+              >
+                <Filter size={14} />
+                {categoryFilter === 'All' ? 'All categories' : categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1)}
+                <ChevronDown size={14} />
+              </button>
+
+              {showCategoryDropdown && (
+                <div className="absolute z-50 top-full mt-1 right-0 sm:left-0 sm:right-auto bg-white border border-slate-200 rounded-[20px] shadow-2xl shadow-slate-200/50 backdrop-blur-xl bg-white/95 overflow-hidden min-w-[160px]">
+                  {[
+                    { name: "All categories", value: "All" },
+                    { name: "Concerts", value: "concert" },
+                    { name: "Festivals", value: "festival" },
+                    { name: "Activities", value: "activity" },
+                    { name: "Sports", value: "sport" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.value}
+                      onClick={() => { setCategoryFilter(cat.value); setShowCategoryDropdown(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-[13px] font-medium hover:bg-slate-50 transition-colors ${categoryFilter === cat.value ? 'bg-emerald-50 text-emerald-600' : 'text-slate-500'}`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="hidden lg:flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setCategoryFilter("All")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[100px] text-[13px] font-medium transition-all ${categoryFilter === 'All' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-transform' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setCategoryFilter("concert")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[100px] text-[13px] font-medium transition-all ${categoryFilter === "concert" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-transform' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'}`}
+              >
+                Concerts
+              </button>
+              <button
+                onClick={() => setCategoryFilter("festival")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[100px] text-[13px] font-medium transition-all ${categoryFilter === "festival" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-transform' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'}`}
+              >
+                Festivals
+              </button>
+              <button
+                onClick={() => setCategoryFilter("activity")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[100px] text-[13px] font-medium transition-all ${categoryFilter === "activity" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-transform' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'}`}
+              >
+                Activities
+              </button>
+              <button
+                onClick={() => setCategoryFilter("sport")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-[100px] text-[13px] font-medium transition-all ${categoryFilter === "sport" ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:-translate-y-0.5 transition-transform' : 'bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300'}`}
+              >
+                Sports
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Active Matches */}
         {activeMatches.length > 0 && (
           <section>
-            <h2 className="text-[13px] uppercase tracking-[0.08em] font-medium text-[var(--muted)] mb-5 flex items-center gap-2">
+            <h2 className="text-[13px] uppercase tracking-[0.08em] font-medium text-slate-500 mb-5 flex items-center gap-2">
               <Users size={16} /> Active Squads
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-              {activeMatches.map((match) => (
+              {activeMatches.filter(m => (categoryFilter === "All" || m.event.category?.toLowerCase() === categoryFilter.toLowerCase()) && m.event.name.toLowerCase().includes(searchQuery.toLowerCase())).map((match) => (
                 <Link
                   key={match.id}
                   href={`/matches/${match.id}`}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-6 md:p-8 hover:border-[var(--border2)] transition-all hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] hover:-translate-y-1 group relative"
+                  className="bg-white border border-slate-200 rounded-[24px] flex flex-col h-full hover:border-slate-300 transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 group relative overflow-hidden"
                 >
                   {match.unreadCount > 0 && (
-                    <div className="absolute -top-2 -right-2 w-7 h-7 bg-[#ef4444] text-white text-[12px] font-bold rounded-full flex items-center justify-center border-[3px] border-[var(--bg)] shadow-xl z-10 animate-pulse">
+                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white text-[13px] font-extrabold rounded-full flex items-center justify-center border-[4px] border-white shadow-lg z-20 animate-pulse">
                       {match.unreadCount}
                     </div>
                   )}
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <h3 className="font-serif text-[28px] leading-tight mb-1.5">
-                        {match.event.name}
-                      </h3>
-                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--bg3)] border border-[var(--border)] rounded-[100px] text-[12px] font-medium text-[var(--muted2)]">
-                        <span>{formatDate(match.event.date)}</span>
-                      </div>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-[var(--accent-dim)] text-[var(--accent-text)] border border-[var(--accent)] flex items-center justify-center font-medium text-[14px] group-hover:bg-[var(--accent)] group-hover:shadow-[0_4px_12px_rgba(184,240,64,0.25)] transition-all">
-                      {match.members.length}
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="flex -space-x-3">
-                      {match.members.slice(0, 3).map((member) => (
-                        <div key={member.id} className="relative">
-                          {member.photo ? (
-                            <img
-                              src={member.photo}
-                              alt={member.displayName}
-                              className="w-12 h-12 rounded-full border-[2px] border-[var(--surface)] object-cover bg-[var(--bg3)]"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full border-[2px] border-[var(--surface)] bg-[var(--bg3)] flex items-center justify-center font-medium text-[13px] text-[var(--muted2)]">
-                              {member.displayName?.slice(0, 2) || '??'}
+                  <div className="h-32 sm:h-40 relative w-full border-b border-slate-200 bg-slate-50 flex-shrink-0 overflow-hidden mb-6">
+                    <EventImage src={match.event.coverImage || match.event.image} alt={match.event.name} category={match.event.category} />
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </div>
+                  <div className="p-6 md:p-8 pt-6 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between mb-8 gap-4">
+                      <div>
+                        <h3 className="font-sans font-extrabold tracking-tight text-lg md:text-lg leading-tight mb-1.5 md:mb-2 group-hover:text-emerald-600 transition-colors text-slate-900 line-clamp-2 break-words" title={match.event.name.split(/ - |—/)[0].trim()}>
+                          {match.event.name.split(/ - |—/)[0].trim()}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
+                            <Calendar size={13} className="text-slate-400" />
+                            <span>{formatDate(match.event.date)}</span>
+                          </div>
+                          {(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city) && (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
+                              <MapPin size={13} className="text-slate-400" />
+                              <span>{(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city).trim()}</span>
                             </div>
                           )}
                         </div>
-                      ))}
-                      {match.members.length > 3 && (
-                        <div className="w-12 h-12 rounded-full border-[2px] border-[var(--surface)] bg-[#bbf7d0] flex items-center justify-center font-medium text-[13px] text-[#166534]">
-                          +{match.members.length - 3}
-                        </div>
-                      )}
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-500 flex items-center justify-center font-medium text-[14px] group-hover:bg-emerald-500 group-hover:text-white group-shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5 transition-all">
+                        {match.members.length}
+                      </div>
                     </div>
-                    <div className="text-[13px] text-[var(--muted2)] font-medium">
-                      {match.members.length} squad member{match.members.length > 1 ? 's' : ''}
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between text-[14px] font-medium pt-5 border-t border-[var(--border)]">
-                    <span className="text-[var(--text)] flex items-center gap-2">
-                      <Users size={16} />
-                      {match.status === 'confirmed' ? 'Confirmed' : 'Matched'}
-                    </span>
-                    <span className="text-[var(--text)] flex items-center gap-1 group-hover:gap-2 transition-all">
-                      Open chat <ArrowRight size={16} />
-                    </span>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="flex -space-x-3">
+                        {match.members.slice(0, 3).map((member) => (
+                          <div key={member.id} className="relative">
+                            {member.photo ? (
+                              <img
+                                src={member.photo}
+                                alt={member.displayName}
+                                className="w-12 h-12 rounded-full border-[2px] border-[white] object-cover bg-slate-100"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full border-[2px] border-[white] bg-slate-100 flex items-center justify-center font-medium text-[13px] text-slate-400">
+                                {member.displayName?.slice(0, 2) || '??'}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {match.members.length > 3 && (
+                          <div className="w-12 h-12 rounded-full border-[2px] border-[white] bg-[#bbf7d0] flex items-center justify-center font-medium text-[13px] text-[#166534]">
+                            +{match.members.length - 3}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-[13px] text-slate-400 font-medium">
+                        {match.members.length} squad member{match.members.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between text-[14px] font-medium pt-5 border-t border-slate-200">
+                      <span className="text-slate-900 flex items-center gap-2">
+                        <Users size={16} />
+                        {match.status === 'confirmed' ? 'Confirmed' : 'Matched'}
+                      </span>
+                      <span className="text-slate-900 flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Open chat <ArrowRight size={16} />
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}
@@ -493,20 +639,20 @@ export default function MatchesPage() {
 
         {/* Pending Requests */}
         <section>
-          <h2 className="text-[13px] uppercase tracking-[0.08em] font-medium text-[var(--muted)] mb-5 flex items-center gap-2">
+          <h2 className="text-[13px] uppercase tracking-[0.08em] font-medium text-slate-500 mb-5 flex items-center gap-2">
             <Clock size={16} /> Pending Requests
           </h2>
 
-          {requestsData?.requests.filter(r => r.status === 'pending').length === 0 ? (
-            <div className="bg-[var(--bg2)] border border-[var(--border)] rounded-[20px] p-12 text-center">
-              <Users size={48} className="text-[var(--muted)] mx-auto mb-4" />
-              <h3 className="font-serif text-[24px] mb-2">No pending requests</h3>
-              <p className="text-[15px] text-[var(--muted2)] mb-6">
+          {requestsData?.requests.filter(r => r.status === "pending" && (categoryFilter === "All" || r.eventId.category?.toLowerCase() === categoryFilter.toLowerCase()) && r.eventId.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
+            <div className="bg-gradient-to-b from-slate-50 to-white border border-slate-200 rounded-[32px] p-16 text-center shadow-sm">
+              <Users size={48} className="text-slate-500 mx-auto mb-4" />
+              <h3 className="font-sans font-extrabold tracking-tight text-[24px] mb-2">No pending requests</h3>
+              <p className="text-[15px] text-slate-400 mb-6">
                 You don&apos;t have any active squad requests. Find an event to start matching!
               </p>
               <Link
                 href="/events"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--accent)] hover:bg-[var(--accent2)] text-[var(--accent-text)] font-medium rounded-[12px] transition-all"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-full transition-all"
               >
                 Browse Events
                 <ArrowRight size={18} />
@@ -514,42 +660,57 @@ export default function MatchesPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {requestsData?.requests.filter(r => r.status === 'pending').map((request) => (
+              {requestsData?.requests.filter(r => r.status === "pending" && (categoryFilter === "All" || r.eventId.category?.toLowerCase() === categoryFilter.toLowerCase()) && r.eventId.name.toLowerCase().includes(searchQuery.toLowerCase())).map((request) => (
                 <div
                   key={request._id}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[20px] overflow-hidden"
+                  className="relative bg-white border border-slate-200 rounded-[24px] overflow-hidden flex flex-col h-full hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 transition-all group"
                 >
-                  <div className="absolute top-0 left-0 w-full h-1 bg-[var(--border)]">
-                    <div className="h-full bg-[var(--accent)] w-1/3 animate-pulse"></div>
-                  </div>
 
-                  <div className="flex items-start justify-between p-6 mt-2">
-                    <div>
-                      <h3 className="font-serif text-[24px] leading-tight mb-1 text-[var(--muted2)]">
-                        {request.eventId.name}
-                      </h3>
-                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[var(--bg3)] rounded-[100px] text-[11px] font-medium text-[var(--muted)]">
-                        Requested: Squad of {request.groupSize}
-                      </div>
-                      <div className="text-[13px] text-[var(--muted2)] mt-1">
-                        {formatDate(request.createdAt)}
+                  <button
+                    onClick={() => cancelRequest(request._id)}
+                    className="absolute top-4 right-4 z-30 bg-white/95 backdrop-blur-md hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200/50 hover:border-red-200 rounded-full px-3 py-1.5 text-[12px] font-medium shadow-sm transition-all flex items-center gap-1.5 opacity-90 hover:opacity-100"
+                  >
+                    <X size={14} />
+                    Cancel
+                  </button>
+
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-[#e2e8f0] z-20">
+                    <div className="h-full bg-emerald-500 w-1/3 animate-pulse"></div>
+                  </div>
+                  <div className="h-28 relative w-full border-b border-slate-200 bg-slate-50 flex-shrink-0 overflow-hidden">
+                    <EventImage src={request.eventId.coverImage || request.eventId.image} alt={request.eventId.name} category={request.eventId.category} />
+                    <div className="absolute inset-0 bg-black/10"></div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-sans font-extrabold tracking-tight text-lg md:text-lg leading-tight mb-1.5 md:mb-2 text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-2 break-words" title={request.eventId.name.split(/ - |—/)[0].trim()}>
+                          {request.eventId.name.split(/ - |—/)[0].trim()}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-full text-[11px] font-medium text-slate-500">
+                            <Users size={12} className="text-slate-400" />
+                            Squad of {request.groupSize}
+                          </div>
+                          {(request.eventId.name.split(/ - |—/)[1] || request.eventId.venue || request.eventId.city) && (
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 rounded-full text-[11px] font-medium text-slate-500">
+                              <MapPin size={12} className="text-slate-400" />
+                              <span>{(request.eventId.name.split(/ - |—/)[1] || request.eventId.venue || request.eventId.city).trim()}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-[12px] text-slate-400 font-medium">
+                          Requested: {formatDate(request.createdAt)}
+                        </div>
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => cancelRequest(request._id)}
-                      className="text-[13px] font-medium text-[var(--muted)] hover:text-[var(--text)] bg-[var(--bg)] px-3 py-1 rounded-[10px] border-2 border-[var(--border)] transition-all hover:bg-[var(--bg2)] hover:border-[var(--border2)] flex items-center gap-1"
-                    >
-                      <X size={14} />
-                      Cancel
-                    </button>
-                  </div>
-
-                  <div className="mt-8 pt-4 border-t border-[var(--border)] flex items-center gap-3 px-6 pb-6">
-                    <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></div>
-                    <span className="text-[13px] text-[var(--muted2)] font-medium">
-                      Matching in progress...
-                    </span>
+                    <div className="mt-auto pt-4 border-t border-slate-200 flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></div>
+                      <span className="text-[13px] text-slate-400 font-medium">
+                        Matching in progress...
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -563,17 +724,17 @@ export default function MatchesPage() {
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              className="p-2 rounded-full border border-[var(--border)] disabled:opacity-30 hover:bg-[var(--bg2)] transition-colors"
+              className="p-2 rounded-full border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
             >
               <ArrowLeft size={18} />
             </button>
-            <span className="text-[14px] font-medium text-[var(--muted2)]">
+            <span className="text-[14px] font-medium text-slate-400">
               Page {currentPage} of {requestsData.pagination.pages}
             </span>
             <button
               disabled={currentPage === requestsData.pagination.pages}
               onClick={() => setCurrentPage(prev => Math.min(requestsData.pagination.pages, prev + 1))}
-              className="p-2 rounded-full border border-[var(--border)] disabled:opacity-30 hover:bg-[var(--bg2)] transition-colors"
+              className="p-2 rounded-full border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
             >
               <ArrowRight size={18} />
             </button>

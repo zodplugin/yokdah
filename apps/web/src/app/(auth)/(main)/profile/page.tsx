@@ -9,12 +9,12 @@ export default function Profile() {
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    
+
     // Edit states
     const [isEditingName, setIsEditingName] = useState(false);
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [isEditingPrefs, setIsEditingPrefs] = useState(false);
-    
+
     // Form fields
     const [editName, setEditName] = useState("");
     const [editTags, setEditTags] = useState<string[]>([]);
@@ -56,7 +56,7 @@ export default function Profile() {
         try {
             setIsSaving(true);
             const updatedUser: any = await api.patch('/api/users/profile', updates);
-            setUser(prev => ({ ...prev, ...updatedUser }));
+            setUser((prev: any) => ({ ...prev, ...updatedUser }));
             setIsEditingName(false);
             setIsEditingTags(false);
             setIsEditingPrefs(false);
@@ -74,7 +74,7 @@ export default function Profile() {
         try {
             setIsSaving(true);
             const res: any = await api.upload('/api/users/photo', file);
-            setUser(prev => ({ ...prev, photo: res.photoUrl }));
+            setUser((prev: any) => ({ ...prev, photo: res.photoUrl }));
         } catch (error) {
             console.error("Failed to upload photo:", error);
         } finally {
@@ -122,7 +122,7 @@ export default function Profile() {
                         <div className="h-[120px] w-full bg-[#f1f5f9] relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-[var(--border)] to-transparent opacity-50"></div>
                             <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} className="hidden" accept="image/*" />
-                            <button 
+                            <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isSaving}
                                 className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-[rgba(0,0,0,0.1)] flex items-center justify-center text-[#475569] hover:bg-white transition-all shadow-sm active:scale-95 disabled:opacity-50"
@@ -143,14 +143,14 @@ export default function Profile() {
                             <div className="mt-4 text-center w-full px-4">
                                 {isEditingName ? (
                                     <div className="flex items-center gap-2 mb-2">
-                                        <input 
+                                        <input
                                             value={editName}
                                             onChange={e => setEditName(e.target.value)}
                                             className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-[8px] px-3 py-1 text-[18px] font-medium outline-none focus:border-[var(--accent)]"
                                             autoFocus
                                             onKeyDown={e => e.key === 'Enter' && handleUpdateProfile({ displayName: editName })}
                                         />
-                                        <button onClick={() => handleUpdateProfile({ displayName: editName })} className="p-1.5 bg-[var(--accent)] text-white rounded-[8px] hover:bg-[var(--accent-dark)] transition-colors">
+                                        <button onClick={() => handleUpdateProfile({ displayName: editName })} className="p-1.5 bg-emerald-500 text-white rounded-[8px] hover:bg-[var(--accent-dark)] transition-colors">
                                             <Check size={16} />
                                         </button>
                                         <button onClick={() => { setIsEditingName(false); setEditName(user.displayName); }} className="p-1.5 bg-[#f3f4f6] text-[#6b7280] rounded-[8px] hover:bg-[#e5e7eb] transition-colors">
@@ -185,26 +185,26 @@ export default function Profile() {
                                 </button>
                             )}
                         </div>
-                        
+
                         {isEditingTags ? (
                             <div className="space-y-4">
                                 <div className="flex flex-wrap gap-2 mb-3">
                                     {editTags.map(tag => (
                                         <span key={tag} className="flex items-center gap-1 px-3 py-1.5 bg-[var(--bg2)] border border-[var(--accent)] text-[var(--accent-text)] rounded-[100px] text-[12px] font-medium animate-fadeUp">
                                             {tag}
-                                            <button onClick={() => removeTag(tag)} className="hover:text-red-500"><X size={12}/></button>
+                                            <button onClick={() => removeTag(tag)} className="hover:text-red-500"><X size={12} /></button>
                                         </span>
                                     ))}
                                 </div>
                                 <div className="flex gap-2">
-                                    <input 
+                                    <input
                                         placeholder="Add tag (e.g. coffee, gaming)"
                                         value={newTag}
                                         onChange={e => setNewTag(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && addTag()}
                                         className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]"
                                     />
-                                    <button onClick={addTag} className="p-2 bg-[var(--accent)] text-white rounded-[8px] hover:bg-[var(--accent-dark)] transition-all">
+                                    <button onClick={addTag} className="p-2 bg-emerald-500 text-white rounded-[8px] hover:bg-[var(--accent-dark)] transition-all">
                                         <Plus size={18} />
                                     </button>
                                 </div>
@@ -266,9 +266,9 @@ export default function Profile() {
                                         <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider">Buddy Gender</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {['any', 'male', 'female'].map(g => (
-                                                <button 
+                                                <button
                                                     key={g}
-                                                    onClick={() => setPrefs({...prefs, genderPreference: g})}
+                                                    onClick={() => setPrefs({ ...prefs, genderPreference: g })}
                                                     className={`py-2 text-[13px] font-medium rounded-[8px] border transition-all capitalize ${prefs.genderPreference === g ? 'bg-[var(--text)] text-white border-[var(--text)] shadow-md' : 'bg-[var(--bg)] border-[var(--border)] text-[var(--muted2)] hover:border-[var(--muted)]'}`}
                                                 >
                                                     {g}
@@ -280,9 +280,9 @@ export default function Profile() {
                                         <label className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-wider">Default Squad Size</label>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[3, 4, 5].map(s => (
-                                                <button 
+                                                <button
                                                     key={s}
-                                                    onClick={() => setPrefs({...prefs, defaultGroupSize: s})}
+                                                    onClick={() => setPrefs({ ...prefs, defaultGroupSize: s })}
                                                     className={`py-2 text-[13px] font-medium rounded-[8px] border transition-all ${prefs.defaultGroupSize === s ? 'bg-[var(--text)] text-white border-[var(--text)] shadow-md' : 'bg-[var(--bg)] border-[var(--border)] text-[var(--muted2)] hover:border-[var(--muted)]'}`}
                                                 >
                                                     {s} members
@@ -298,21 +298,21 @@ export default function Profile() {
                                         <span className="text-[14px] font-medium">{prefs.ageMin} - {prefs.ageMax} yrs</span>
                                     </div>
                                     <div className="flex gap-4 items-center">
-                                        <input 
-                                            type="range" min="18" max="60" value={prefs.ageMin} 
-                                            onChange={e => setPrefs({...prefs, ageMin: parseInt(e.target.value), ageMax: Math.max(parseInt(e.target.value), prefs.ageMax)})}
-                                            className="flex-1 accent-[var(--accent)]" 
+                                        <input
+                                            type="range" min="18" max="60" value={prefs.ageMin}
+                                            onChange={e => setPrefs({ ...prefs, ageMin: parseInt(e.target.value), ageMax: Math.max(parseInt(e.target.value), prefs.ageMax) })}
+                                            className="flex-1 accent-[var(--accent)]"
                                         />
-                                        <input 
-                                            type="range" min="18" max="60" value={prefs.ageMax} 
-                                            onChange={e => setPrefs({...prefs, ageMax: parseInt(e.target.value), ageMin: Math.min(parseInt(e.target.value), prefs.ageMin)})}
-                                            className="flex-1 accent-[var(--accent)]" 
+                                        <input
+                                            type="range" min="18" max="60" value={prefs.ageMax}
+                                            onChange={e => setPrefs({ ...prefs, ageMax: parseInt(e.target.value), ageMin: Math.min(parseInt(e.target.value), prefs.ageMin) })}
+                                            className="flex-1 accent-[var(--accent)]"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="flex gap-3 pt-6 border-t border-[var(--border)]">
-                                    <button 
+                                    <button
                                         onClick={() => handleUpdateProfile(prefs)}
                                         disabled={isSaving}
                                         className="flex-1 py-3.5 bg-[var(--text)] text-white rounded-[12px] text-[14px] font-bold hover:bg-[#202517] transition-all flex items-center justify-center gap-2"
@@ -326,7 +326,7 @@ export default function Profile() {
                             <div className="space-y-8 max-w-sm">
                                 <div className="border-b border-[var(--border)] pb-6 hover:border-[var(--muted)] transition-colors">
                                     <div className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-[0.1em] mb-3">Ideal Group Size</div>
-                                    <div className="text-[18px] font-medium">Squad of {user.defaultGroupSize || 4} <span className="text-[14px] text-[var(--muted)] font-normal ml-1">(1 + { (user.defaultGroupSize || 4) - 1 })</span></div>
+                                    <div className="text-[18px] font-medium">Squad of {user.defaultGroupSize || 4} <span className="text-[14px] text-[var(--muted)] font-normal ml-1">(1 + {(user.defaultGroupSize || 4) - 1})</span></div>
                                 </div>
                                 <div className="border-b border-[var(--border)] pb-6 hover:border-[var(--muted)] transition-colors">
                                     <div className="text-[12px] font-bold text-[var(--muted)] uppercase tracking-[0.1em] mb-3">Buddy Gender</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Send, Image as ImageIcon, ArrowLeft, Info, MoreHorizontal, User, CheckCircle2, Timer, AlertCircle, X, Target, Flame, Loader2, Reply, Pin } from "lucide-react";
+import { Send, Image as ImageIcon, ArrowLeft, Info, MoreHorizontal, User, CheckCircle2, Timer, AlertCircle, X, Target, Flame, Loader2, Reply, Pin, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -221,7 +221,7 @@ export default function MatchChat() {
             if (matchInfo?.chatRoomId) {
                 await api.post(`/api/chats/${matchInfo.chatRoomId}/confirm`, { status });
                 setShowConfirmPrompt(false);
-                
+
                 if (status === 'cant_go') {
                     router.push('/matches');
                     return;
@@ -341,7 +341,15 @@ export default function MatchChat() {
                                 <ArrowLeft size={18} />
                             </Link>
                             <div>
-                                <h2 className="font-serif text-[24px] md:text-[28px] leading-none mb-1">{matchInfo.event?.name || 'Squad Chat'}</h2>
+                                <h2 className="font-sans font-extrabold tracking-tight text-[20px] md:text-[24px] leading-tight mb-2 text-slate-900" title={matchInfo.event?.name || 'Squad Chat'}>
+                                    {matchInfo.event?.name ? matchInfo.event.name.split(/ - |—/)[0].trim() : 'Squad Chat'}
+                                </h2>
+                                {matchInfo.event && (matchInfo.event.name.split(/ - |—/)[1] || matchInfo.event.venue || matchInfo.event.city) && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
+                                        <MapPin size={13} className="text-slate-400" />
+                                        <span>{(matchInfo.event.name.split(/ - |—/)[1] || matchInfo.event.venue || matchInfo.event.city).trim()}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -350,7 +358,7 @@ export default function MatchChat() {
                                     href={matchInfo.event.ticketUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent2)] text-[var(--accent-text)] text-[13px] font-bold rounded-[10px] transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-bold rounded-[10px] transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
                                 >
                                     <Target size={16} /> Buy Ticket
                                 </a>
@@ -398,13 +406,13 @@ export default function MatchChat() {
 
                 {/* Pinned Message */}
                 {pinnedMessageId && (
-                    <div className="bg-[var(--accent-dim)] text-[var(--accent-text)] px-6 py-2.5 flex items-center gap-3 border-b border-[var(--border)] z-10 text-[13px] sticky top-0 cursor-pointer shadow-sm transition-colors hover:bg-[var(--accent)] hover:text-white"
+                    <div className="bg-[var(--accent-dim)] text-[var(--accent-text)] px-6 py-2.5 flex items-center gap-3 border-b border-[var(--border)] z-10 text-[13px] sticky top-0 cursor-pointer shadow-sm transition-colors hover:bg-emerald-500 hover:text-white"
                         onClick={() => {
                             const el = document.getElementById(`msg-${pinnedMessageId}`);
                             if (el) {
                                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                el.classList.add('bg-[#fef08a]', 'dark:bg-[#854d0e]', 'transition-colors', 'duration-500');
-                                setTimeout(() => el.classList.remove('bg-[#fef08a]', 'dark:bg-[#854d0e]'), 2000);
+                                el.classList.add('bg-emerald-100', 'transition-colors', 'duration-500');
+                                setTimeout(() => el.classList.remove('bg-emerald-100'), 2000);
                             }
                         }}>
                         <Pin size={14} className="flex-shrink-0" />
@@ -443,7 +451,7 @@ export default function MatchChat() {
                             <div key={m._id || i} id={`msg-${m._id}`} className={`flex gap-3 max-w-2xl animate-fadeUp relative group transition-colors duration-500 ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
 
                                 {!isMe && showName ? (
-                                    <div className="w-8 h-8 rounded-full border border-[var(--border)] bg-[#fef08a] flex-shrink-0 flex items-center justify-center text-[11px] font-medium text-[#854d0e] mt-1 shadow-sm overflow-hidden">
+                                    <div className="w-8 h-8 rounded-full border border-slate-200 bg-emerald-50 flex-shrink-0 flex items-center justify-center text-[11px] font-medium text-emerald-700 mt-1 shadow-sm overflow-hidden">
                                         {sender.photo ? <img src={sender.photo} alt="Avatar" className="w-full h-full object-cover" /> : sender.displayName?.substring(0, 2).toUpperCase()}
                                     </div>
                                 ) : !isMe ? (
@@ -462,17 +470,17 @@ export default function MatchChat() {
                                     <div className="flex items-center gap-2">
                                         {isMe && (
                                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0">
-                                                <button className="p-1.5 hover:bg-[var(--surface)] border border-transparent hover:border-[var(--border)] rounded-full text-[var(--muted)] hover:text-[var(--text)] transition-all" onClick={() => setReplyingTo({ _id: m._id, content: m.content, senderName: sender.displayName })}>
+                                                <button className="p-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-all" onClick={() => setReplyingTo({ _id: m._id, content: m.content, senderName: sender.displayName })}>
                                                     <Reply size={15} />
                                                 </button>
-                                                <button className="p-1.5 hover:bg-[var(--surface)] border border-transparent hover:border-[var(--border)] rounded-full text-[var(--muted)] hover:text-[var(--text)] transition-all" onClick={() => togglePin(m._id)}>
-                                                    <Pin size={15} className={pinnedMessageId === m._id ? 'text-[var(--accent)] fill-current' : ''} />
+                                                <button className="p-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-all" onClick={() => togglePin(m._id)}>
+                                                    <Pin size={15} className={pinnedMessageId === m._id ? 'text-emerald-500 fill-current' : ''} />
                                                 </button>
                                             </div>
                                         )}
                                         <div className={`border rounded-[18px] px-5 py-3 text-[15px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] whitespace-pre-wrap break-words ${isMe
-                                                ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--bg)] rounded-tr-sm'
-                                                : 'bg-[var(--bg2)] border-[var(--border)] text-[var(--text)] rounded-tl-sm'
+                                            ? 'bg-emerald-500 border-emerald-500 text-white rounded-tr-sm'
+                                            : 'bg-slate-50 border-slate-200 text-slate-900 rounded-tl-sm'
                                             }`}>
                                             {m.replyTo && (
                                                 <div className="text-[12px] bg-black/10 dark:bg-white/10 rounded-[8px] p-2 mb-2 border-l-[3px] border-current opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
@@ -480,8 +488,8 @@ export default function MatchChat() {
                                                         const el = document.getElementById(`msg-${m.replyTo._id}`);
                                                         if (el) {
                                                             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                                            el.classList.add('bg-[#fef08a]', 'dark:bg-[#854d0e]', 'transition-colors', 'duration-500');
-                                                            setTimeout(() => el.classList.remove('bg-[#fef08a]', 'dark:bg-[#854d0e]'), 2000);
+                                                            el.classList.add('bg-[#fef08a]', 'transition-colors', 'duration-500');
+                                                            setTimeout(() => el.classList.remove('bg-[#fef08a]'), 2000);
                                                         }
                                                     }}>
                                                     <div className="font-medium mb-0.5 truncate">{m.replyTo.senderName || m.replyTo.senderId?.displayName || 'Someone'}</div>
@@ -489,10 +497,10 @@ export default function MatchChat() {
                                                 </div>
                                             )}
                                             {m.type === 'photo' && m.photoUrl && (
-                                                <img 
-                                                    src={m.photoUrl} 
-                                                    alt="attachment" 
-                                                    className="max-w-full max-h-[300px] rounded-[12px] mb-2 object-cover block cursor-pointer hover:brightness-90 transition-all" 
+                                                <img
+                                                    src={m.photoUrl}
+                                                    alt="attachment"
+                                                    className="max-w-full max-h-[300px] rounded-[12px] mb-2 object-cover block cursor-pointer hover:brightness-90 transition-all"
                                                     onClick={() => setPreviewImage(m.photoUrl)}
                                                 />
                                             )}
@@ -500,11 +508,11 @@ export default function MatchChat() {
                                         </div>
                                         {!isMe && (
                                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0">
-                                                <button className="p-1.5 hover:bg-[var(--surface)] border border-transparent hover:border-[var(--border)] rounded-full text-[var(--muted)] hover:text-[var(--text)] transition-all" onClick={() => setReplyingTo({ _id: m._id, content: m.content, senderName: sender.displayName })}>
+                                                <button className="p-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-all" onClick={() => setReplyingTo({ _id: m._id, content: m.content, senderName: sender.displayName })}>
                                                     <Reply size={15} />
                                                 </button>
-                                                <button className="p-1.5 hover:bg-[var(--surface)] border border-transparent hover:border-[var(--border)] rounded-full text-[var(--muted)] hover:text-[var(--text)] transition-all" onClick={() => togglePin(m._id)}>
-                                                    <Pin size={15} className={pinnedMessageId === m._id ? 'text-[var(--accent)] fill-current' : ''} />
+                                                <button className="p-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-full text-slate-400 hover:text-slate-700 transition-all" onClick={() => togglePin(m._id)}>
+                                                    <Pin size={15} className={pinnedMessageId === m._id ? 'text-emerald-500 fill-current' : ''} />
                                                 </button>
                                             </div>
                                         )}
@@ -520,7 +528,7 @@ export default function MatchChat() {
                             <div className="bg-[var(--surface)] text-[var(--text)] text-[14px] px-5 py-4 rounded-[16px] shadow-sm border border-[var(--border)] max-w-[85%] text-center">
                                 <p className="mb-3 font-medium">Event is coming up! Let your squad know — are you going?</p>
                                 <div className="flex gap-2 justify-center">
-                                    <button onClick={() => submitConfirm('going')} className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent2)] text-white text-[13px] font-semibold rounded-full transition-colors">I'm in! 🙌</button>
+                                    <button onClick={() => submitConfirm('going')} className="px-4 py-2 bg-emerald-500 hover:bg-[var(--accent2)] text-white text-[13px] font-semibold rounded-full transition-colors">I'm in! 🙌</button>
                                     <button onClick={() => submitConfirm('cant_go')} className="px-4 py-2 bg-[var(--bg2)] hover:bg-[var(--surface)] text-[var(--text)] text-[13px] font-medium rounded-full border border-[var(--border)] transition-colors">Can't go</button>
                                 </div>
                             </div>
@@ -572,7 +580,9 @@ export default function MatchChat() {
                 <div className="p-6 border-b border-[var(--border)] flex items-center justify-between">
                     <div>
                         <h3 className="font-medium text-[16px] mb-1">Squad Details</h3>
-                        <p className="text-[13px] text-[var(--muted2)]">Event: {matchInfo.event?.name}</p>
+                        <p className="text-[13px] text-[var(--muted2)] leading-tight font-medium" title={matchInfo.event?.name}>
+                            {matchInfo.event?.name ? matchInfo.event.name.split(/ - |—/)[0].trim() : ''}
+                        </p>
                     </div>
                     <button onClick={() => setShowInfo(false)} className="w-10 h-10 rounded-full hover:bg-[var(--bg2)] flex items-center justify-center lg:hidden">
                         <X size={20} />
@@ -684,10 +694,10 @@ export default function MatchChat() {
                         <X size={32} />
                     </button>
                     <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
-                        <img 
-                            src={previewImage} 
-                            alt="Full preview" 
-                            className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-[8px]" 
+                        <img
+                            src={previewImage}
+                            alt="Full preview"
+                            className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-[8px]"
                         />
                     </div>
                 </div>

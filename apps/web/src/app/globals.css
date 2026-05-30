@@ -94,4 +94,4 @@ body {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--border2);
-}
+}html { scroll-behavior: smooth; }

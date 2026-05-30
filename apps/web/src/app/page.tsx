@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { User, Music, Headphones, Guitar, Target, MessageSquare, Sparkles, Lock, Zap, Map, Star, Flame } from "lucide-react";
+import HowItWorksCanvas from "../components/HowItWorksCanvas";
 
 export default function BuddLanding() {
   const [scrolled, setScrolled] = useState(false);
@@ -10,7 +11,7 @@ export default function BuddLanding() {
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
     if (token) setIsLoggedIn(true);
-    
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 40);
     };
@@ -20,7 +21,8 @@ export default function BuddLanding() {
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
-            e.target.classList.add("visible");
+            e.target.classList.remove("opacity-0", "translate-y-8", "blur-sm");
+            e.target.classList.add("opacity-100", "translate-y-0", "blur-none");
             observer.unobserve(e.target);
           }
         });
@@ -37,766 +39,231 @@ export default function BuddLanding() {
   }, []);
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap');
-
-        *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        :root {
-          --bg: #FFFFFF;
-          --bg2: #F7F8F5;
-          --bg3: #F0F2EC;
-          --surface: #FFFFFF;
-          --border: #E8EAE3;
-          --border2: #D4D8CC;
-          --text: #0F1209;
-          --muted: #9AA08C;
-          --muted2: #5C6050;
-          --accent: #B8F040;
-          --accent2: #94CC20;
-          --accent-dim: rgba(184,240,64,0.15);
-          --accent-text: #3D5A00;
-          
-          --radius: 14px;
-          --radius-sm: 8px;
-        }
-
-        html { scroll-behavior: smooth; }
-        body { 
-          background: var(--bg); 
-          color: var(--text); 
-          font-family: 'Geist', sans-serif; 
-          font-size: 15px; 
-          line-height: 1.65; 
-          overflow-x: hidden; 
-          -webkit-font-smoothing: antialiased;
-          background-image: radial-gradient(#E8EAE3 1px, transparent 1px);
-          background-size: 24px 24px;
-        }
-
-        /* Nav */
-        nav {
-          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 18px 48px;
-          border-bottom: 1px solid transparent;
-          transition: border-color .3s, background .3s, backdrop-filter .3s;
-        }
-        nav.scrolled {
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(20px);
-          border-bottom-color: var(--border);
-        }
-        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo-mark {
-          width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          font-family: 'Instrument Serif', serif; font-size: 18px; color: var(--text); font-weight: 400;
-        }
-        .logo-text { font-size: 18px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; }
-        .nav-links { display: flex; align-items: center; gap: 32px; }
-        .nav-links a { color: var(--muted2); text-decoration: none; font-size: 14px; font-weight: 400; transition: color .2s; }
-        .nav-links a:hover { color: var(--text); }
-        .nav-cta {
-          background: var(--accent); color: var(--text);
-          padding: 9px 20px; border-radius: 10px;
-          font-size: 14px; font-weight: 500; text-decoration: none;
-          transition: background .2s, transform .15s, box-shadow .2s;
-        }
-        .nav-cta:hover { 
-          background: var(--accent2); 
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(184,240,64,0.3);
-        }
-
-        /* Hero */
-        .hero {
-          min-height: 100vh; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: 120px 48px 80px; text-align: center;
-          position: relative; z-index: 1;
-          background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,1)), url('/images/image.webp') center/cover no-repeat;
-        }
-
-        .hero-badge {
-          display: inline-flex; align-items: center; gap: 8px;
-          border: 1px solid var(--border); background: var(--surface);
-          padding: 6px 14px; border-radius: 100px; margin-bottom: 32px;
-          font-size: 13px; color: var(--muted2);
-          animation: fadeUp .6s ease both;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        }
-        .hero-badge span { color: var(--accent-text); font-weight: 500; }
-        .badge-dot { width: 6px; height: 6px; background: var(--accent-dark); border-radius: 50%; animation: pulse 2s infinite; }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(0.8); } }
-
-        .hero h1 {
-          font-family: 'Instrument Serif', serif;
-          font-size: clamp(52px, 7vw, 88px);
-          font-weight: 400; line-height: 1.05;
-          letter-spacing: -0.03em;
-          max-width: 900px;
-          animation: fadeUp .7s .1s ease both;
-          color: var(--text);
-        }
-        .hero h1 em { font-style: italic; color: var(--accent-text); }
-
-        .hero-sub {
-          font-size: 18px; color: var(--muted2); line-height: 1.6;
-          max-width: 520px; margin: 24px auto 0;
-          font-weight: 400;
-          animation: fadeUp .7s .2s ease both;
-        }
-
-        .hero-actions {
-          display: flex; align-items: center; gap: 16px; margin-top: 40px;
-          animation: fadeUp .7s .3s ease both;
-        }
-        .btn-primary {
-          background: var(--accent); color: var(--text);
-          padding: 14px 28px; border-radius: 10px;
-          font-size: 15px; font-weight: 500; text-decoration: none;
-          transition: background .2s, transform .15s, box-shadow .2s;
-          box-shadow: 0 0 30px rgba(184,240,64,0.25);
-        }
-        .btn-primary:hover { 
-          background: var(--accent2); 
-          transform: translateY(-2px); 
-          box-shadow: 0 0 40px rgba(184,240,64,0.35); 
-        }
-        .btn-ghost {
-          color: var(--text); padding: 14px 24px;
-          font-size: 15px; text-decoration: none;
-          border: 1px solid var(--border); border-radius: 10px;
-          background: var(--surface);
-          transition: color .2s, border-color .2s, background .2s;
-        }
-        .btn-ghost:hover { 
-          background: var(--bg2); 
-          border-color: var(--border2); 
-        }
-
-        .hero-social-proof {
-          margin-top: 56px;
-          display: flex; align-items: center; gap: 16px;
-          animation: fadeUp .7s .4s ease both;
-        }
-        .avatars { display: flex; }
-        .avatar {
-          width: 32px; height: 32px; border-radius: 50%;
-          border: 2px solid var(--bg);
-          margin-left: -10px;
-          background: var(--bg2);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px;
-        }
-        .avatar:first-child { margin-left: 0; }
-        .proof-text { font-size: 13px; color: var(--muted2); }
-        .proof-text strong { color: var(--text); }
-
-        /* Preview Window */
-        .preview-wrap {
-          position: relative; z-index: 1;
-          padding: 0 48px 80px;
-          animation: fadeUp .8s .5s ease both;
-        }
-        .preview-frame {
-          max-width: 1000px; margin: 0 auto;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 20px;
-          overflow: hidden;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-          position: relative;
-        }
-        .preview-bar {
-          background: var(--bg2);
-          padding: 14px 20px;
-          display: flex; align-items: center; gap: 8px;
-          border-bottom: 1px solid var(--border);
-        }
-        .dot { width: 10px; height: 10px; border-radius: 50%; }
-        .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
-        .preview-url {
-          margin-left: 16px; background: var(--surface);
-          border-radius: 6px; padding: 4px 14px;
-          border: 1px solid var(--border);
-          font-size: 12px; color: var(--muted); flex: 1; max-width: 260px;
-        }
-
-        .preview-body { display: flex; height: 480px; }
-        .preview-sidebar {
-          width: 220px; background: var(--bg2); border-right: 1px solid var(--border);
-          padding: 20px 0; flex-shrink: 0;
-        }
-        .sidebar-item {
-          padding: 10px 20px; font-size: 13px; color: var(--muted2);
-          display: flex; align-items: center; gap: 10px; cursor: default;
-          transition: background .15s;
-        }
-        .sidebar-item.active { background: var(--accent-dim); color: var(--accent-text); font-weight: 500; }
-        .sidebar-item.active .s-dot { background: var(--accent-text); }
-        .s-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
-        .sidebar-section {
-          padding: 16px 20px 8px; font-size: 11px; letter-spacing: .08em;
-          text-transform: uppercase; color: var(--muted);
-        }
-
-        .preview-main { flex: 1; padding: 28px; overflow: hidden; background: var(--surface); }
-        .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-        .preview-title { font-size: 18px; font-weight: 500; letter-spacing: -0.02em; }
-        .preview-tag {
-          background: var(--accent-dim); color: var(--accent-text);
-          font-size: 11px; padding: 3px 10px; border-radius: 100px;
-        }
-
-        .event-cards { display: flex; flex-direction: column; gap: 12px; }
-        .ecard {
-          background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-          padding: 16px; display: flex; align-items: center; gap: 16px;
-          transition: border-color .2s, box-shadow .2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .ecard:hover { 
-          border-color: var(--border2); 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-        }
-        .ecard-icon {
-          width: 44px; height: 44px; border-radius: 10px;
-          background: var(--bg2); border: 1px solid var(--border);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 20px; flex-shrink: 0;
-        }
-        .ecard-info { flex: 1; }
-        .ecard-name { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-        .ecard-meta { font-size: 12px; color: var(--muted); }
-        .ecard-badge {
-          font-size: 11px; padding: 4px 10px; border-radius: 100px;
-          background: var(--accent); color: var(--text);
-          font-weight: 500; white-space: nowrap;
-        }
-        .ecard-badge.hot { background: #ffe4e1; color: #d63c30; }
-
-        .match-panel {
-          width: 220px; background: var(--bg2); border-left: 1px solid var(--border);
-          padding: 20px; flex-shrink: 0;
-        }
-        .match-title { font-size: 13px; font-weight: 500; margin-bottom: 16px; color: var(--muted2); }
-        .match-card {
-          background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-          padding: 14px; margin-bottom: 10px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-        .match-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
-        .match-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-        .tag {
-          font-size: 10px; padding: 2px 8px; border-radius: 100px;
-          background: var(--bg3); color: var(--muted2); border: 1px solid var(--border);
-        }
-        .score-bar { margin-top: 10px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-        .score-fill { height: 100%; background: var(--accent); border-radius: 2px; }
-
-        /* Logos */
-        .logos-section {
-          padding: 0 48px 80px; position: relative; z-index: 1;
-        }
-        .logos-label { text-align: center; font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; letter-spacing: .08em; }
-        .logos-row { display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
-        .logo-pill {
-          font-size: 14px; font-weight: 500; color: var(--muted2);
-          padding: 8px 20px; border: 1px solid var(--border); border-radius: 100px;
-          transition: color .2s, border-color .2s;
-          background: var(--surface);
-        }
-        .logo-pill:hover { color: var(--text); border-color: var(--border2); }
-
-        /* Features */
-        .section { padding: 100px 48px; position: relative; z-index: 1; background: var(--surface); }
-        .section-label {
-          display: inline-flex; align-items: center; gap: 8px;
-          font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-          color: var(--accent-text); margin-bottom: 16px; font-weight: 500;
-        }
-        .section-title {
-          font-family: 'Instrument Serif', serif;
-          font-size: clamp(36px, 4vw, 56px);
-          font-weight: 400; line-height: 1.1; letter-spacing: -0.02em;
-          max-width: 640px; color: var(--text);
-        }
-        .section-title em { font-style: italic; color: var(--accent-text); }
-
-        .features-grid {
-          display: grid; grid-template-columns: 1fr 1fr 1fr;
-          gap: 20px;
-          margin-top: 60px;
-        }
-        .feature-cell {
-          background: var(--bg); padding: 36px;
-          border-radius: 14px; border: 1px solid var(--border);
-          transition: box-shadow .2s, transform .2s;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .feature-cell:hover {
-          box-shadow: 0 4px 24px rgba(0,0,0,0.06);
-          transform: translateY(-2px);
-        }
-        .feature-icon {
-          width: 40px; height: 40px; border-radius: 10px;
-          background: var(--accent-dim); border: 1px solid var(--accent);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 18px; margin-bottom: 20px;
-        }
-        .feature-name { font-size: 16px; font-weight: 500; margin-bottom: 8px; letter-spacing: -0.01em; }
-        .feature-desc { font-size: 14px; color: var(--muted2); line-height: 1.6; }
-
-        /* How it works */
-        .steps {
-          display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-          gap: 24px; margin-top: 60px;
-        }
-        .step { position: relative; padding: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .step-num {
-          font-family: 'Instrument Serif', serif; font-size: 48px;
-          color: var(--border2); line-height: 1; margin-bottom: 16px;
-          font-weight: 400;
-        }
-        .step-title { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
-        .step-desc { font-size: 13px; color: var(--muted2); line-height: 1.6; }
-        .step-connector {
-          position: absolute; top: 50%; right: -13px;
-          width: 24px; height: 1px; background: var(--border); z-index: 2;
-        }
-        .step:last-child .step-connector { display: none; }
-
-        /* Testimonials */
-        .testimonials { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 60px; }
-        .tcard {
-          background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-          padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .tcard-quote {
-          font-size: 15px; line-height: 1.65; color: var(--text); margin-bottom: 20px;
-          font-weight: 400;
-        }
-        .tcard-author { display: flex; align-items: center; gap: 12px; }
-        .tcard-avatar {
-          width: 36px; height: 36px; border-radius: 50%;
-          background: var(--bg2); border: 1px solid var(--border);
-          display: flex; align-items: center; justify-content: center; font-size: 15px;
-        }
-        .tcard-name { font-size: 13px; font-weight: 500; }
-        .tcard-meta { font-size: 12px; color: var(--muted); }
-        .stars { color: #f59e0b; font-size: 12px; margin-bottom: 12px; letter-spacing: 2px; }
-
-        /* CTA */
-        .cta-section { 
-          padding: 200px 48px; position: relative; z-index: 1; text-align: center; 
-          background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,1)), url('/images/homev4.jpeg') center/cover no-repeat;
-        }
-        .cta-box {
-          max-width: 700px; margin: 0 auto;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 20px; padding: 72px 48px;
-          position: relative; overflow: hidden;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-        }
-        .cta-title {
-          font-family: 'Instrument Serif', serif;
-          font-size: clamp(36px, 4vw, 56px);
-          font-weight: 400; line-height: 1.1;
-          letter-spacing: -0.02em; margin-bottom: 16px;
-        }
-        .cta-title em { font-style: italic; color: var(--accent-text); }
-        .cta-sub { font-size: 16px; color: var(--muted2); margin-bottom: 36px; }
-
-        /* Footer */
-        footer {
-          border-top: 1px solid var(--border);
-          padding: 40px 48px; background: var(--surface);
-          display: flex; align-items: center; justify-content: space-between;
-          position: relative; z-index: 1;
-        }
-        .footer-copy { font-size: 13px; color: var(--muted); }
-        .footer-links { display: flex; gap: 24px; }
-        .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color .2s; }
-        .footer-links a:hover { color: var(--text); }
-
-        /* Animations */
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-        .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
-        .reveal.visible { opacity: 1; transform: translateY(0); }
-
-        @media(max-width: 900px) {
-          nav { padding: 16px 24px; }
-          .hero { padding: 100px 24px 60px; }
-          .preview-wrap { padding: 0 24px 60px; }
-          .logos-section, .section, .cta-section { padding: 60px 24px; }
-          .features-grid { grid-template-columns: 1fr; }
-          .steps { grid-template-columns: 1fr 1fr; }
-          .testimonials { grid-template-columns: 1fr; }
-          .preview-main, .match-panel { display: none; }
-          footer { flex-direction: column; gap: 16px; padding: 32px 24px; }
-          .nav-links { display: none; }
-        }
-      `}} />
-
-      <nav id="nav" className={scrolled ? "scrolled" : ""}>
-        <a className="logo" href="#">
-          <div className="logo-mark">B</div>
-          <span className="logo-text">Budd</span>
-        </a>
-        <div className="nav-links">
-          <a href="#features">Features</a>
-          <a href="#how">How it works</a>
-          <a href="#stories">Stories</a>
-        </div>
-        <a className="nav-cta" href={isLoggedIn ? "/events" : "/register"}>
-          {isLoggedIn ? "Browse events" : "Get early access"}
-        </a>
-      </nav>
-
-      <section className="hero">
-        <div className="hero-badge">
-          <span className="badge-dot"></span>
-          <span>Now live in 12 cities</span> — expanding across Indonesia
-        </div>
-
-        <h1>Find the right people<br />for every <em>experience</em></h1>
-
-        <p className="hero-sub">
-          Smart buddy matching for concerts, parties, and activities.
-          Never show up alone to something worth sharing.
-        </p>
-
-        <div className="hero-actions">
-          <a href={isLoggedIn ? "/events" : "/register"} className="btn-primary">
-            {isLoggedIn ? "Browse events" : "Find your buddy"}
+    <div className="min-h-screen bg-slate-50 p-3 sm:p-4 flex flex-col font-sans text-slate-900">
+      <div
+        className="flex-1 bg-white rounded-[32px] md:rounded-[40px] border border-slate-200 shadow-xl shadow-slate-200/50 relative overflow-hidden"
+        style={{
+          backgroundImage: "radial-gradient(#e2e8f0 1px, transparent 1px)",
+          backgroundSize: "32px 32px"
+        }}
+      >
+        <nav
+          className={`fixed z-50 flex items-center justify-between top-6 left-1/2 -translate-x-1/2 w-[calc(100%-48px)] max-w-5xl rounded-full transition-all duration-300 ${scrolled
+            ? "bg-white/95 shadow-lg shadow-slate-200/50 py-3 px-6 border border-slate-200"
+            : "bg-white/80 backdrop-blur-xl shadow-sm py-4 px-6 sm:px-8 border border-slate-200"
+            }`}
+        >
+          <a className="flex items-center gap-2.5 text-slate-900 no-underline" href="#">
+            <div className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center font-bold text-lg">B</div>
+            <span className="font-bold text-lg tracking-tight">Budd</span>
           </a>
-          <a href="#how" className="btn-ghost">See how it works</a>
-        </div>
-
-        <div className="hero-social-proof">
-          <div className="avatars">
-            <div className="avatar"><User size={16} /></div>
-            <div className="avatar"><User size={16} /></div>
-            <div className="avatar"><User size={16} /></div>
-            <div className="avatar"><User size={16} /></div>
-            <div className="avatar"><User size={16} /></div>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">Features</a>
+            <a href="#how" className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">How it works</a>
+            <a href="#stories" className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">Stories</a>
           </div>
-          <p className="proof-text"><strong>4,200+</strong> buddies matched this month</p>
-        </div>
-      </section>
-
-      {/* APP PREVIEW */}
-      <div className="preview-wrap">
-        <div className="preview-frame">
-          <div className="preview-bar">
-            <div className="dot dot-r"></div>
-            <div className="dot dot-y"></div>
-            <div className="dot dot-g"></div>
-            <div className="preview-url">app.budd.io/events</div>
-          </div>
-          <div className="preview-body">
-            <div className="preview-sidebar">
-              <div className="sidebar-section">Navigation</div>
-              <div className="sidebar-item active"><span className="s-dot"></span>Browse events</div>
-              <div className="sidebar-item"><span className="s-dot"></span>My matches</div>
-              <div className="sidebar-item"><span className="s-dot"></span>Messages</div>
-              <div className="sidebar-section">Account</div>
-              <div className="sidebar-item"><span className="s-dot"></span>Profile</div>
-              <div className="sidebar-item"><span className="s-dot"></span>Settings</div>
-            </div>
-            <div className="preview-main">
-              <div className="preview-header">
-                <div className="preview-title">Events near you</div>
-                <div className="preview-tag">Jakarta · This week</div>
-              </div>
-              <div className="event-cards">
-                <div className="ecard">
-                  <div className="ecard-icon"><Music size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">SCENTROPOLIS.JKT</div>
-                    <div className="ecard-meta">11 Apr - 12 Apr 2026 · 10:00 - 20:00 · Chillax Sudirman</div>
-                  </div>
-                  <div className="ecard-badge hot" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Flame size={12} /> Hot</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Headphones size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">KONSER 30th Project Pop</div>
-                    <div className="ecard-meta">08 Aug 2026 · 19:00 - 21:00 · Tennis Indoor Senayan</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Guitar size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">Pestapora 2026</div>
-                    <div className="ecard-meta">25 Sep - 27 Sep 2026 · 15:00 - 23:59 · JAKARTA</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Music size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">2026 WOODZ WORLD TOUR ' Archive. 1 ' IN JAKARTA</div>
-                    <div className="ecard-meta">09 May 2026 · 19:00 - 21:00 · The Kasablanka</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Headphones size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN JAKARTA</div>
-                    <div className="ecard-meta">18 Apr 2026 · 19:00 - 22:00 · THE KASABLANKA HALL</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Guitar size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">Afgan - retrospektif The Concert 2026</div>
-                    <div className="ecard-meta">18 Jul 2026 · 13:00 - 22:00 · Plenary Hall JCC, Senayan</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Music size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">Interaksi Festival 2026</div>
-                    <div className="ecard-meta">25 Jul 2026 · 15:00 - 23:00 · Stadion Pakansari</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Headphones size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">WHISKY LIVE JAKARTA 2026</div>
-                    <div className="ecard-meta">11 Apr - 12 Apr 2026 · 13:00 - 23:00 · Park Hyatt Jakarta</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Guitar size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">JakCloth Lebaran 2026 - Bekasi</div>
-                    <div className="ecard-meta">07 Mar - 18 Mar 2026 · 13:00 - 23:00 · Pasar Modern Kota Harapan Indah</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-                <div className="ecard">
-                  <div className="ecard-icon"><Music size={20} /></div>
-                  <div className="ecard-info">
-                    <div className="ecard-name">JakCloth Lebaran 2026 - Cikarang</div>
-                    <div className="ecard-meta">07 Mar - 18 Mar 2026 · 13:00 - 23:00 · Mall Lippo Cikarang</div>
-                  </div>
-                  <div className="ecard-badge">Join</div>
-                </div>
-              </div>
-            </div>
-            <div className="match-panel">
-              <div className="match-title">Your matches</div>
-              <div className="match-card">
-                <div className="match-name">Sophie K.</div>
-                <div className="match-tags">
-                  <span className="tag">chill</span>
-                  <span className="tag">regular</span>
-                </div>
-                <div className="score-bar"><div className="score-fill" style={{ width: '88%' }}></div></div>
-              </div>
-              <div className="match-card">
-                <div className="match-name">Mika R.</div>
-                <div className="match-tags">
-                  <span className="tag">hype</span>
-                  <span className="tag">first-timer</span>
-                </div>
-                <div className="score-bar"><div className="score-fill" style={{ width: '72%' }}></div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* LOGOS */}
-      <div className="logos-section reveal">
-        <p className="logos-label">People are using <em>Budd</em> to find buddies for events in</p>
-        <div className="logos-row">
-          <span className="logo-pill">Jakarta</span>
-          <span className="logo-pill">Bandung</span>
-          <span className="logo-pill">Surabaya</span>
-          <span className="logo-pill">Bali</span>
-          <span className="logo-pill">Medan</span>
-          <span className="logo-pill">Yogyakarta</span>
-        </div>
-        
-        {/* Placeholder for brand/partner logos */}
-        <div className="logos-row" style={{ marginTop: '32px', opacity: 0.6 }}>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-          <div className="logo-placeholder" style={{ width: '120px', height: '40px', background: 'var(--bg3)', borderRadius: '8px', border: '1px dashed var(--border2)' }}></div>
-        </div>
-      </div>
-
-      {/* FEATURES */}
-      <section className="section" id="features">
-        <div className="reveal">
-          <div className="section-label">Features</div>
-          <h2 className="section-title">Everything you need to <em>never go alone</em></h2>
-        </div>
-        <div className="features-grid reveal">
-          <div className="feature-cell">
-            <div className="feature-icon"><Target size={20} /></div>
-            <div className="feature-name">Smart matching</div>
-            <p className="feature-desc">Weighted scoring across vibe tags, age, preferences, and past ratings. Not random — actually compatible.</p>
-          </div>
-          <div className="feature-cell">
-            <div className="feature-icon"><MessageSquare size={20} /></div>
-            <div className="feature-name">Real-time chat</div>
-            <p className="feature-desc">Instant messaging with typing indicators, read receipts, and auto ice-breaker prompts so first messages aren't awkward.</p>
-          </div>
-          <div className="feature-cell">
-            <div className="feature-icon"><Sparkles size={20} /></div>
-            <div className="feature-name">Vibe tags</div>
-            <p className="feature-desc">Tag yourself as chill, hype, introvert-friendly, first-timer. Match with people who actually get your energy.</p>
-          </div>
-          <div className="feature-cell">
-            <div className="feature-icon"><Lock size={20} /></div>
-            <div className="feature-name">Identity verified</div>
-            <p className="feature-desc">Optional KYC verification through a trusted third party. See who's verified before you agree to meet.</p>
-          </div>
-          <div className="feature-cell">
-            <div className="feature-icon"><Zap size={20} /></div>
-            <div className="feature-name">Instant notifications</div>
-            <p className="feature-desc">Get notified the moment you're matched — not hours later via a batch email. Real-time, every time.</p>
-          </div>
-          <div className="feature-cell">
-            <div className="feature-icon"><Map size={20} /></div>
-            <div className="feature-name">Events across Indonesia</div>
-            <p className="feature-desc">Concerts, parties, museum visits, padel, escape rooms — any experience, any city in Indonesia. We're adding more every week.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="section" id="how" style={{ background: 'var(--bg2)' }}>
-        <div className="reveal">
-          <div className="section-label">How it works</div>
-          <h2 className="section-title">From solo to <em>squad</em> in minutes</h2>
-        </div>
-        <div className="steps reveal">
-          <div className="step">
-            <div className="step-num">01</div>
-            <div className="step-title">Set your vibe</div>
-            <p className="step-desc">Pick your vibe tags, age range, and gender preference during a 60-second onboarding.</p>
-            <div className="step-connector"></div>
-          </div>
-          <div className="step">
-            <div className="step-num">02</div>
-            <div className="step-title">Find an event</div>
-            <p className="step-desc">Browse upcoming events or activities and tap "join" on anything that interests you.</p>
-            <div className="step-connector"></div>
-          </div>
-          <div className="step">
-            <div className="step-num">03</div>
-            <div className="step-title">Get matched</div>
-            <p className="step-desc">Our engine scores all candidates and pairs you with the highest compatible buddy.</p>
-            <div className="step-connector"></div>
-          </div>
-          <div className="step">
-            <div className="step-num">04</div>
-            <div className="step-title">Go enjoy it</div>
-            <p className="step-desc">Chat, coordinate your meetup, and show up together. Rate each other after for better future matches.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* TESTIMONIALS */}
-      <section className="section" id="stories">
-        <div className="reveal">
-          <div className="section-label">Stories</div>
-          <h2 className="section-title">People who stopped <em>going alone</em></h2>
-        </div>
-        <div className="testimonials reveal">
-          <div className="tcard">
-            <div className="stars" style={{ display: 'flex', gap: '2px' }}>
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-            </div>
-            <p className="tcard-quote">"I wanted to go to a party at TillaTec but didn't want to go alone. Matched with three other girls. Same energy, same vibe. Would totally use it again."</p>
-            <div className="tcard-author">
-              <div className="tcard-avatar"><User size={16} /></div>
-              <div>
-                <div className="tcard-name">Anisa S.</div>
-                <div className="tcard-meta">Jakarta · Concerts</div>
-              </div>
-            </div>
-          </div>
-          <div className="tcard">
-            <div className="stars" style={{ display: 'flex', gap: '2px' }}>
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-            </div>
-            <p className="tcard-quote">"The vibe tags made all the difference. Matched with someone who was also a first-timer at a festival — we navigated it together. Perfect."</p>
-            <div className="tcard-author">
-              <div className="tcard-avatar"><User size={16} /></div>
-              <div>
-                <div className="tcard-name">Budi M.</div>
-                <div className="tcard-meta">Bandung · Festivals</div>
-              </div>
-            </div>
-          </div>
-          <div className="tcard">
-            <div className="stars" style={{ display: 'flex', gap: '2px' }}>
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-              <Star size={12} fill="currentColor" strokeWidth={0} />
-            </div>
-            <p className="tcard-quote">"Used it for a museum trip and ended up spending 4 hours there. My buddy knew everything about the exhibition. Best unexpected afternoon."</p>
-            <div className="tcard-author">
-              <div className="tcard-avatar"><User size={16} /></div>
-              <div>
-                <div className="tcard-name">Ayu T.</div>
-                <div className="tcard-meta">Bali · Activities</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="cta-section">
-        <div className="cta-box reveal">
-          <h2 className="cta-title">Ready to find your <em>person</em>?</h2>
-          <p className="cta-sub">Join thousands of people who stopped letting great experiences pass them by.</p>
-          <a href={isLoggedIn ? "/events" : "/register"} className="btn-primary">
-            {isLoggedIn ? "Browse events" : "Get early access — it's free"}
+          <a
+            href={isLoggedIn ? "/events" : "/register"}
+            className="bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-0.5 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all shadow-md shadow-emerald-500/20 inline-flex items-center justify-center"
+          >
+            {isLoggedIn ? "Browse events" : "Get early access"}
           </a>
-        </div>
-      </section>
+        </nav>
 
-      <footer>
-        <span className="footer-copy">© 2026 Budd. All rights reserved.</span>
-        <div className="footer-links">
-          <a href="#">Terms</a>
-          <a href="#">Privacy</a>
-          <a href="#">Contact</a>
-        </div>
-      </footer>
-    </>
+        <section
+          className="min-h-[90vh] flex flex-col items-center justify-center text-center px-6 pt-40 pb-20 relative"
+          style={{
+            background: "linear-gradient(to bottom, rgba(255,255,255,0.7) 0%, rgba(255,255,255,1) 100%), url('/images/homev4.jpeg') center/cover no-repeat"
+          }}
+        >
+          <div className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out inline-flex items-center gap-2 bg-white border border-slate-200 px-4 py-1.5 rounded-full text-sm font-semibold text-slate-500 mb-8 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Now live in 12 cities across Indonesia
+          </div>
+
+          <h1
+            className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out text-5xl md:text-7xl lg:text-[80px] font-extrabold leading-[1.05] tracking-tight max-w-4xl text-slate-900 mb-6"
+            style={{ transitionDelay: '100ms' }}
+          >
+            Find the right people<br />for every <span className="text-emerald-500">experience</span>
+          </h1>
+
+          <p
+            className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out text-lg text-slate-500 max-w-xl leading-relaxed font-medium mb-10"
+            style={{ transitionDelay: '200ms' }}
+          >
+            Smart buddy matching for concerts, parties, and activities.
+            Never show up alone to something worth sharing.
+          </p>
+
+          <div
+            className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out flex flex-col sm:flex-row items-center gap-4"
+            style={{ transitionDelay: '300ms' }}
+          >
+            <a
+              href={isLoggedIn ? "/events" : "/register"}
+              className="bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-0.5 text-white font-bold px-8 py-4 rounded-full transition-all shadow-lg shadow-emerald-500/25 w-full sm:w-auto"
+            >
+              {isLoggedIn ? "Browse events" : "Find your buddy"}
+            </a>
+            <a
+              href="#how"
+              className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-900 font-bold px-8 py-4 rounded-full transition-colors w-full sm:w-auto"
+            >
+              See how it works
+            </a>
+          </div>
+
+          <div
+            className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out mt-16 flex items-center justify-center gap-4"
+            style={{ transitionDelay: '400ms' }}
+          >
+            <div className="flex">
+              {[
+                "https://i.pravatar.cc/100?img=11",
+                "https://i.pravatar.cc/100?img=22",
+                "https://i.pravatar.cc/100?img=33",
+                "https://i.pravatar.cc/100?img=44"
+              ].map((url, i) => (
+                <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 -ml-3 flex items-center justify-center text-slate-400 first:ml-0 z-10 overflow-hidden relative">
+                  <img src={url} alt="Buddy" className="w-full h-full object-cover" />
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-slate-500 font-medium">
+              <strong className="text-slate-900 font-bold">4,200+</strong> buddies matched this month
+            </p>
+          </div>
+        </section>
+
+        <section className="px-6 pb-24 md:pb-32">
+          <div className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out max-w-5xl mx-auto bg-white border border-slate-200 rounded-[24px] md:rounded-[32px] overflow-hidden shadow-2xl shadow-slate-200/50">
+            <div className="bg-slate-50 border-b border-slate-200 p-4 px-6 flex items-center gap-2.5">
+              <div className="w-3 h-3 rounded-full bg-red-400"></div>
+              <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+              <div className="w-3 h-3 rounded-full bg-green-400"></div>
+              <div className="ml-4 bg-white border border-slate-200 rounded-lg px-4 py-1.5 text-xs font-medium text-slate-500 shadow-sm">
+                app.budd.io/events
+              </div>
+            </div>
+            <div className="p-6 md:p-10 grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/50">
+              {[
+                { icon: Music, title: "SCENTROPOLIS.JKT", meta: "11 Apr 2026 · Chillax Sudirman" },
+                { icon: Guitar, title: "Pestapora 2026", meta: "25 Sep 2026 · JAKARTA" },
+                { icon: Headphones, title: "WHISKY LIVE JAKARTA", meta: "11 Apr 2026 · Park Hyatt" },
+                { icon: Flame, title: "Interaksi Festival", meta: "25 Jul 2026 · Stadion Pakansari" }
+              ].map((card, idx) => (
+                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 flex items-start gap-4 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-200/50 hover:-translate-y-1 transition-all duration-300">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                    <card.icon size={24} />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 mb-1">{card.title}</div>
+                    <div className="text-sm text-slate-500">{card.meta}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 px-6 border-y border-slate-200 bg-slate-50 text-center">
+          <div className="max-w-6xl mx-auto">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">Trusted by thousands of event-goers in</p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {(([
+                { name: "JAKARTA", image: "https://images.pexels.com/photos/2116719/pexels-photo-2116719.jpeg?cs=srgb&dl=pexels-tomfisk-2116719.jpg&fm=jpg" },
+                { name: "BANDUNG", image: "https://images.unsplash.com/photo-1549473889-14f410d83298?auto=format&fit=crop&q=80&w=600" },
+                { name: "SURABAYA", image: "https://plus.unsplash.com/premium_photo-1690959214934-802fdf410b3e?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8c3VyYWJheWF8ZW58MHx8MHx8fDA%3D" },
+                { name: "BALI", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=600" },
+                { name: "SEMARANG", image: "https://images.pexels.com/photos/31863754/pexels-photo-31863754/free-photo-of-arsitektur-tua.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500" }
+              ] as Array<{ name: string; image: string; video?: string }>)).map((city, idx) => (
+                <div
+                  key={city.name}
+                  className="group relative aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 reveal opacity-0 translate-y-8 blur-sm"
+                  style={{ transitionDelay: `${idx * 100}ms` }}
+                >
+                  {city?.video ? (
+                    <video
+                      autoPlay loop muted playsInline
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                      src={city?.video}
+                    />
+                  ) : (
+                    <img
+                      src={city.image}
+                      alt={city.name}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent group-hover:from-black/90 transition-colors duration-300"></div>
+                  <div className="absolute bottom-6 left-0 right-0 text-center">
+                    <span className="text-xl font-extrabold text-white tracking-wide">{city.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="py-24 md:py-32 px-6 max-w-6xl mx-auto">
+          <div className="text-center mb-16 md:mb-20">
+            <div className="text-emerald-500 font-bold text-sm uppercase tracking-widest mb-4">Features</div>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">Everything you need</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {[
+              { icon: Target, title: "Smart matching", desc: "Weighted scoring across vibe tags, age, preferences, and past ratings. Not random — actually compatible.", delay: "0ms" },
+              { icon: MessageSquare, title: "Real-time chat", desc: "Instant messaging with typing indicators and auto ice-breaker prompts so first messages aren't awkward.", delay: "100ms" },
+              { icon: Lock, title: "Identity verified", desc: "Optional KYC verification through a trusted third party. See who's verified before you agree to meet.", delay: "200ms" }
+            ].map((feature, idx) => (
+              <div
+                key={idx}
+                className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out bg-white border border-slate-200 rounded-3xl p-8 md:p-10 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1"
+                style={{ transitionDelay: feature.delay }}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center mb-8">
+                  <feature.icon size={28} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
+                <p className="text-slate-500 leading-relaxed">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <HowItWorksCanvas />
+
+        <section className="py-24 md:py-32 px-6 text-center relative overflow-hidden">
+          <video
+            autoPlay loop muted playsInline
+            className="absolute inset-0 w-full h-full object-cover z-0"
+            src="/videos/home.mp4"
+          />
+          {/* Subtle overlay over the video to make the center card pop more */}
+          <div className="absolute inset-0 bg-black/30 z-0"></div>
+
+          <div className="reveal opacity-0 translate-y-8 blur-sm transition-all duration-700 ease-out max-w-4xl mx-auto rounded-[32px] md:rounded-[40px] p-12 md:p-24 relative overflow-hidden shadow-2xl shadow-black/40 border border-white/20 bg-white/90 backdrop-blur-xl z-10">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 relative z-10">Ready to find your person?</h2>
+            <p className="text-lg md:text-xl text-slate-600 max-w-xl mx-auto mb-10 relative z-10 font-medium">Join thousands of people who stopped letting great experiences pass them by.</p>
+            <a
+              href={isLoggedIn ? "/events" : "/register"}
+              className="bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-1 text-white font-bold px-8 py-4 rounded-full transition-all shadow-lg shadow-emerald-500/25 inline-flex items-center justify-center relative z-10"
+            >
+              {isLoggedIn ? "Browse events" : "Get early access - it's free"}
+            </a>
+          </div>
+        </section>
+
+        <footer className="py-10 px-8 md:px-12 border-t border-slate-200 bg-white flex flex-col sm:flex-row justify-between items-center gap-6">
+          <div className="text-slate-500 text-sm font-medium">© 2026 Budd. All rights reserved.</div>
+          <div className="flex gap-6">
+            <a href="#" className="text-slate-500 hover:text-slate-900 text-sm font-bold transition-colors">Terms</a>
+            <a href="#" className="text-slate-500 hover:text-slate-900 text-sm font-bold transition-colors">Privacy</a>
+            <a href="#" className="text-slate-500 hover:text-slate-900 text-sm font-bold transition-colors">Contact</a>
+          </div>
+        </footer>
+      </div>
+    </div>
   );
 }

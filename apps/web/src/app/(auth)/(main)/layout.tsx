@@ -100,16 +100,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     ];
 
     return (
-        <div className="flex bg-[var(--bg)] min-h-screen font-sans text-[var(--text)]">
+        <div className="flex bg-slate-50 min-h-screen font-sans text-slate-900">
             {/* Sidebar */}
-            <aside className="w-[260px] bg-[var(--surface)] border-r border-[var(--border)] flex-shrink-0 flex-col hidden md:flex h-screen sticky top-0">
+            <aside className="w-[260px] bg-white/95 backdrop-blur-xl border-r border-slate-200 flex-shrink-0 flex-col hidden md:flex h-screen sticky top-0">
                 <div className="p-6 pb-2">
-                    <Link href="/" className="font-serif text-[28px]">Budd</Link>
+                    <Link href="/" className="font-sans font-extrabold tracking-tight text-[28px]">Budd</Link>
                 </div>
 
                 <div className="flex-1 px-4 py-6 space-y-8">
                     <div>
-                        <div className="px-3 text-[11px] uppercase tracking-[0.08em] font-medium text-[var(--muted)] mb-3">Navigation</div>
+                        <div className="px-3 text-[11px] uppercase tracking-[0.08em] font-medium text-slate-400 mb-3">Navigation</div>
                         <nav className="space-y-1">
                             {navItems.map(item => {
                                 const active = pathname.startsWith(item.href);
@@ -117,7 +117,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className={`flex items-center justify-between px-3 py-2.5 rounded-[10px] text-[14px] font-medium transition-colors ${active ? 'bg-[var(--accent-dim)] text-[var(--accent-text)]' : 'text-[var(--muted2)] hover:text-[var(--text)] hover:bg-[var(--bg2)]'}`}
+                                        className={`flex items-center justify-between px-3 py-2.5 rounded-[10px] text-[14px] font-medium transition-colors ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <item.icon size={18} />
@@ -135,9 +135,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     </div>
 
                     <div>
-                        <div className="px-3 text-[11px] uppercase tracking-[0.08em] font-medium text-[var(--muted)] mb-3">Account</div>
+                        <div className="px-3 text-[11px] uppercase tracking-[0.08em] font-medium text-slate-400 mb-3">Account</div>
                         <nav className="space-y-1">
-                            <Link href="/profile" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] font-medium text-[var(--muted2)] hover:text-[var(--text)] hover:bg-[var(--bg2)] transition-colors">
+                            <Link href="/profile" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
                                 <User size={18} /> Profile
                             </Link>
                             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[14px] font-medium text-[#ef4444] hover:bg-[#ef444410] transition-colors">
@@ -147,37 +147,37 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-[var(--border)]">
+                <div className="p-4 border-t border-slate-200">
                     <div className="flex items-center gap-3 p-2">
                         {user?.photo ? (
-                            <img src={user.photo} alt={user.displayName} className="w-8 h-8 rounded-full object-cover border border-[var(--border)]" />
+                            <img src={user.photo} alt={user.displayName} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
                         ) : (
-                            <div className="w-8 h-8 rounded-full bg-[var(--bg2)] border border-[var(--border)] flex items-center justify-center"><User size={14} /></div>
+                            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center"><User size={14} /></div>
                         )}
                         <div className="flex-1 overflow-hidden">
                             <div className="text-[13px] font-medium leading-none mb-1 truncate">{user?.displayName || "Loading..."}</div>
-                            <div className="text-[11px] text-[var(--muted)] leading-none">Reliability: {user?.reliabilityScore || 100}</div>
+                            <div className="text-[11px] text-slate-400 leading-none">Reliability: {user?.reliabilityScore || 100}</div>
                         </div>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-x-hidden border-l border-[var(--border)] ml-[-1px] pb-[70px] md:pb-0">
+            <main className="flex-1 overflow-x-hidden border-l border-slate-200 ml-[-1px] pb-[70px] md:pb-0">
                 {children}
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-[var(--surface)] border-t border-[var(--border)] flex md:hidden items-center justify-around h-[70px] px-2 z-[200] pb-safe">
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 flex md:hidden items-center justify-around h-[70px] px-2 z-[200] pb-safe">
                 {navItems.map(item => {
                     const active = pathname.startsWith(item.href);
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors relative ${active ? 'text-[var(--accent-text)]' : 'text-[var(--muted2)] hover:text-[var(--text)]'}`}
+                            className={`flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors relative ${active ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-900'}`}
                         >
-                            <div className={`p-1.5 rounded-full transition-all ${active ? 'bg-[var(--accent-dim)]' : ''}`}>
+                            <div className={`p-1.5 rounded-full transition-all ${active ? 'bg-emerald-50' : ''}`}>
                                 <item.icon size={22} strokeWidth={active ? 2.5 : 2} />
                             </div>
                             <span className="text-[10px] font-medium mt-1 uppercase tracking-[0.05em]">{item.name.split(' ')[0]}</span>
@@ -191,9 +191,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 })}
                 <Link
                     href="/profile"
-                    className={`flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors relative ${pathname === '/profile' ? 'text-[var(--accent-text)]' : 'text-[var(--muted2)]'}`}
+                    className={`flex flex-col items-center justify-center p-2 min-w-[64px] transition-colors relative ${pathname === '/profile' ? 'text-emerald-600' : 'text-slate-500'}`}
                 >
-                    <div className={`p-1.5 rounded-full transition-all ${pathname === '/profile' ? 'bg-[var(--accent-dim)]' : ''}`}>
+                    <div className={`p-1.5 rounded-full transition-all ${pathname === '/profile' ? 'bg-emerald-50' : ''}`}>
                         <User size={22} strokeWidth={pathname === '/profile' ? 2.5 : 2} />
                     </div>
                     <span className="text-[10px] font-medium mt-1 uppercase tracking-[0.05em]">Profile</span>
@@ -203,8 +203,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             {/* Global Notification Toast */}
             {toast && (
                 <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] animate-fadeDown w-[90%] md:w-auto">
-                    <Link href={`/matches/${toast.matchId}`} className="bg-[var(--text)] text-[var(--bg)] px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:-translate-y-0.5 transition-all">
-                        <Flame size={18} className="text-[var(--accent)]" />
+                    <Link href={`/matches/${toast.matchId}`} className="bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 hover:-translate-y-0.5 transition-all">
+                        <Flame size={18} className="text-emerald-500" />
                         <span className="text-[14px] font-medium truncate">{toast.message}</span>
                         <X size={16} className="ml-2 opacity-50 flex-shrink-0" onClick={(e) => { e.preventDefault(); setToast(null); }} />
                     </Link>

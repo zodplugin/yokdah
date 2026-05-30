@@ -9,18 +9,29 @@ export default function Register() {
     const [email, setEmail] = useState("");
     const [whatsappNumber, setWhatsappNumber] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [errorToast, setErrorToast] = useState("");
     const router = useRouter();
+
+    const showError = (msg: string) => {
+        setErrorToast(msg);
+        setTimeout(() => setErrorToast(""), 4000);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !whatsappNumber) return;
+
+        let formattedNumber = whatsappNumber.replace(/\D/g, '');
+        if (formattedNumber.startsWith('8')) {
+            formattedNumber = '0' + formattedNumber;
+        }
 
         setIsLoading(true);
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, whatsappNumber })
+                body: JSON.stringify({ email, whatsappNumber: formattedNumber })
             });
 
             if (response.ok) {
@@ -31,37 +42,49 @@ export default function Register() {
                 router.push("/onboarding");
             } else {
                 const data = await response.json();
-                alert(data.error || 'Registration failed');
+                showError(data.message || data.error || 'Registration failed');
             }
         } catch (error) {
-            alert('Something went wrong');
+            showError('Something went wrong');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <main className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg2)] text-[var(--text)] font-sans">
-            <Link href="/" className="absolute top-6 left-6 md:top-12 md:left-12 font-serif text-[24px] text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">
-                Budd
-            </Link>
+        <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50 text-slate-900 font-sans relative overflow-hidden">
+            {/* Decorative Background */}
+            <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-300/20 blur-[100px] pointer-events-none mix-blend-multiply"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-300/20 blur-[120px] pointer-events-none mix-blend-multiply"></div>
+            <div className="absolute top-[20%] right-[10%] w-[300px] h-[300px] rounded-full bg-purple-300/20 blur-[80px] pointer-events-none mix-blend-multiply"></div>
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
+            {errorToast && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] animate-fadeDown w-[90%] md:w-auto">
+                    <div className="bg-red-500 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+                        <span className="text-[14px] font-medium">{errorToast}</span>
+                        <button onClick={() => setErrorToast("")} className="ml-2 opacity-50 hover:opacity-100 transition-opacity">×</button>
+                    </div>
+                </div>
+            )}
 
-            <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[20px] p-8 md:p-12 shadow-[0_4px_16px_rgba(0,0,0,0.04)] relative">
+
+
+            <div className="w-full max-w-md bg-white border border-slate-200 rounded-[32px] p-8 md:p-12 shadow-2xl shadow-slate-200/50 relative">
                 <div className="w-12 h-12 bg-[var(--text)] text-white rounded-[10px] flex items-center justify-center mb-8 shadow-md">
                     <Sparkles size={24} />
                 </div>
 
                 <form onSubmit={handleSubmit} className="animate-fadeUp">
-                    <h1 className="font-serif text-[36px] font-normal leading-[1.1] tracking-[-0.02em] mb-4">
+                    <h1 className="font-sans font-extrabold tracking-tight text-[36px]  leading-[1.1] tracking-[-0.02em] mb-4">
                         Find your <em>people</em>
                     </h1>
-                    <p className="text-[15px] text-[var(--muted2)] mb-8">
+                    <p className="text-[15px] text-slate-500 mb-8">
                         Create an account to start matching for the best events.
                     </p>
 
                     <div className="space-y-4 mb-6">
                         <div>
-                            <label htmlFor="email" className="block text-[13px] font-medium text-[var(--muted2)] mb-2 ml-1">
+                            <label htmlFor="email" className="block text-[13px] font-medium text-slate-500 mb-2 ml-1">
                                 Email address
                             </label>
                             <input
@@ -71,12 +94,12 @@ export default function Register() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="hello@example.com"
                                 required
-                                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-[10px] px-4 py-3 text-[15px] outline-none focus:border-[var(--accent-dark)] focus:ring-2 focus:ring-[var(--accent-dim)] transition-all"
+                                className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-3 text-[15px] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="whatsapp" className="block text-[13px] font-medium text-[var(--muted2)] mb-2 ml-1">
+                            <label htmlFor="whatsapp" className="block text-[13px] font-medium text-slate-500 mb-2 ml-1">
                                 WhatsApp Number
                             </label>
                             <input
@@ -86,24 +109,24 @@ export default function Register() {
                                 onChange={(e) => setWhatsappNumber(e.target.value)}
                                 placeholder="081234567890"
                                 required
-                                className="w-full bg-[var(--bg)] border border-[var(--border)] rounded-[10px] px-4 py-3 text-[15px] outline-none focus:border-[var(--accent-dark)] focus:ring-2 focus:ring-[var(--accent-dim)] transition-all"
+                                className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-3 text-[15px] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                             />
-                            <p className="text-[12px] text-[var(--muted)] mt-2 ml-1">Format: 08xxxxxxxxxx (for notifications)</p>
+                            <p className="text-[12px] text-slate-400 mt-2 ml-1">Format: 08xxxxxxxxxx (for notifications)</p>
                         </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-[var(--accent)] hover:bg-[var(--accent2)] text-[var(--text)] font-medium text-[15px] py-3.5 px-6 rounded-[10px] flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(184,240,64,0.25)] hover:shadow-[0_0_40px_rgba(184,240,64,0.35)] hover:-translate-y-0.5 mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-[15px] py-3.5 px-6 rounded-full flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-1 mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Continue to onboarding'}
                         {!isLoading && <ArrowRight size={18} />}
                     </button>
 
                     <div className="text-center">
-                        <span className="text-[14px] text-[var(--muted2)]">Already have an account? </span>
-                        <Link href="/login" className="text-[14px] font-medium text-[var(--text)] hover:text-[var(--accent-text)] transition-colors">Log in</Link>
+                        <span className="text-[14px] text-slate-500">Already have an account? </span>
+                        <Link href="/login" className="text-[14px] font-medium text-slate-900 hover:text-white transition-colors">Log in</Link>
                     </div>
                 </form>
             </div>
