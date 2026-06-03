@@ -14,6 +14,7 @@
     "scrape:loket": "tsx scripts/scrape-loket.ts",
     "scrape:megatix": "tsx scripts/scrape-megatix.ts",
     "scrape:tixid": "tsx scripts/scrape-tixid.ts",
+    "scrape:tixid:browser": "tsx scripts/scrape-tixid-browser.ts",
     "scrape:goers": "tsx scripts/scrape-goers.ts",
     "scrape:all": "npm run scrape:dewatiket && npm run scrape:kiostix && npm run scrape:loket && npm run scrape:megatix && npm run scrape:tixid && npm run scrape:goers"
   },
@@ -51,6 +52,7 @@
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
     "eslint": "^9.17.0",
+    "playwright": "^1.60.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
