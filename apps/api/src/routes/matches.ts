@@ -127,12 +127,23 @@ export async function matchRoutes(fastify: FastifyInstance) {
           }
         }
 
+        const funFacts = [
+          "Awesome squad! Vibes compatibility is at 99%.",
+          "Perfect match! Get ready to meet friends on the exact same wavelength.",
+          "Vibes matched perfectly! Start chatting now to keep the momentum going.",
+          "Squad formed! Don't forget to coordinate your dress code!",
+          "Squad gathered! Get ready to make this event unforgettable."
+        ];
+        const reqIdStr = String(req._id);
+        const funInfo = funFacts[Math.abs(reqIdStr.charCodeAt(0) + reqIdStr.charCodeAt(reqIdStr.length - 1)) % funFacts.length];
+
         return {
           ...req,
           matchId: match?._id,
           chatRoomId,
           unreadCount,
-          members
+          members,
+          funInfo
         };
       }
       return req;

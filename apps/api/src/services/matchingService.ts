@@ -7,6 +7,7 @@ import { Event } from '../models/Event'
 import { ReliabilityLog } from '../models/ReliabilityLog'
 import { notificationQueue } from '../config/queue'
 import { calculateDaysUntilEvent } from '../utils/helpers'
+import { io } from '../config/socket'
 
 // ─── Score ────────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ export async function runMatching(eventId: string) {
 
         const user = userMap.get(request.userId.toString())
         if (user) {
-          await notificationQueue.add('send-notification', {
+          await notificationQueue?.add('send-notification', {
             type: 'expired',
             data: { userId: user._id, eventName: event.name, eventId: event._id }
           })
@@ -274,7 +275,7 @@ async function createMatch(group: any[], eventId: string, eventName: string) {
   })
   await chatRoom.save()
 
-  match.chatRoomId = chatRoom._id
+  match.chatRoomId = String(chatRoom._id)
   await match.save()
 
   const iceBreakerMessage = new ChatMessage({
@@ -287,14 +288,64 @@ async function createMatch(group: any[], eventId: string, eventName: string) {
   })
   await iceBreakerMessage.save()
 
+  // Fetch full details for the socket emit payload
+  let members: any[] = []
+  let eventDoc: any = null
+  try {
+    const userDocs = await User.find({ _id: { $in: memberIds } }, 'displayName photo reliabilityScore').lean()
+    members = userDocs.map(m => ({
+      id: m._id.toString(),
+      displayName: m.displayName,
+      photo: m.photo,
+      reliabilityScore: m.reliabilityScore
+    }))
+    eventDoc = await Event.findById(eventId).lean()
+  } catch (err) {
+    console.error('Failed to fetch details for match payload:', err)
+  }
+
+  const funFacts = [
+    "Awesome squad! Vibes compatibility is at 99%.",
+    "Perfect match! Get ready to meet friends on the exact same wavelength.",
+    "Vibes matched perfectly! Start chatting now to keep the momentum going.",
+    "Squad formed! Don't forget to coordinate your dress code!",
+    "Squad gathered! Get ready to make this event unforgettable."
+  ]
+  const matchIdStr = match._id.toString()
+  const funInfo = funFacts[Math.abs(matchIdStr.charCodeAt(0) + matchIdStr.charCodeAt(matchIdStr.length - 1)) % funFacts.length]
+
+  const matchPayload = {
+    id: match._id.toString(),
+    event: {
+      _id: eventId,
+      name: eventName,
+      date: eventDoc?.date,
+      category: eventDoc?.category,
+      city: eventDoc?.city,
+      coverImage: eventDoc?.coverImage,
+      image: eventDoc?.image
+    },
+    status: 'matched',
+    unreadCount: 0,
+    funInfo,
+    members,
+    chatRoomId: chatRoom._id.toString()
+  }
+
   for (const request of group) {
     request.status = 'matched'
     await request.save()
 
-    await notificationQueue.add('send-notification', {
+    await notificationQueue?.add('send-notification', {
       type: 'match_found',
       data: { userId: request.userId, matchId: match._id, eventName }
     })
+
+    // Emit live socket event if io is connected
+    if (io) {
+      console.log(`Socket: Emitting match-found to user:${request.userId.toString()}`)
+      io.to(`user:${request.userId.toString()}`).emit('match-found', matchPayload)
+    }
   }
 
   console.log(`✅ Match created: ${match._id} | Members: ${memberIds.join(', ')}`)
@@ -316,7 +367,7 @@ export async function rematchGroup(chatRoomId: string) {
     await match.save()
 
     for (const userId of remainingMembers) {
-      await notificationQueue.add('send-notification', {
+      await notificationQueue?.add('send-notification', {
         type: 'group_dissolved',
         data: { userId, eventId: chatRoom.eventId }
       })
@@ -353,7 +404,7 @@ export async function rematchGroup(chatRoomId: string) {
     const avgScore = allScores.reduce((sum, score) => sum + score, 0) / allScores.length
 
     if (avgScore >= 3) {
-      await notificationQueue.add('send-notification', {
+      await notificationQueue?.add('send-notification', {
         type: 'replacement_offer',
         data: {
           userId: request.userId,
