@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Clock, ArrowRight, X, ArrowLeft, Search, User, Calendar, Hash, CheckCircle2, AlertCircle, Loader2, Music, Headphones, Guitar, Sparkles, Target, Filter, ChevronDown, MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Users, Clock, ArrowRight, X, ArrowLeft, Search, User, Calendar, Hash, CheckCircle2, AlertCircle, Loader2, Music, Headphones, Guitar, Sparkles, Target, Filter, ChevronDown, MapPin, Heart, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import socket from "@/lib/socket";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Event {
   _id: string;
@@ -35,6 +37,7 @@ interface MatchRequest {
   matchId?: string;
   chatRoomId?: string;
   unreadCount?: number;
+  funInfo?: string;
   members?: {
     id: string;
     displayName: string;
@@ -60,6 +63,7 @@ interface ApiMatchResponse {
   event: Event;
   status: 'matched' | 'confirmed';
   unreadCount: number;
+  funInfo?: string;
   members: {
     id: string;
     displayName: string;
@@ -132,6 +136,10 @@ export default function MatchesPage() {
   const [event, setEvent] = useState<Event | null>(null);
 
   // Fetch data
+  const [knownMatchIds, setKnownMatchIds] = useState<string[]>([]);
+  const isFirstLoad = useRef(true);
+  const [showMatchOverlay, setShowMatchOverlay] = useState<ApiMatchResponse | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -153,11 +161,25 @@ export default function MatchesPage() {
             unreadCount: r.unreadCount || 0,
             members: r.members || [],
             chatRoomId: r.chatRoomId || '',
+            funInfo: r.funInfo
           }));
 
         // Filter out matches with missing events/dates
         const validMatches = matches.filter(m => m.event && m.event.date);
         setActiveMatches(validMatches);
+
+        // Compare and detect if there is a new match
+        const validMatchIds = validMatches.map(m => m.id);
+        if (isFirstLoad.current) {
+          setKnownMatchIds(validMatchIds);
+          isFirstLoad.current = false;
+        } else {
+          const newMatch = validMatches.find(m => !knownMatchIds.includes(m.id));
+          if (newMatch) {
+            setShowMatchOverlay(newMatch);
+            setKnownMatchIds(validMatchIds);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -166,6 +188,33 @@ export default function MatchesPage() {
     };
 
     fetchData();
+  }, [currentPage]);
+
+  // Fetch event if eventId is present
+  useEffect(() => {
+    // Listen to socket match-found event in real-time
+    const handleMatchFound = (newMatch: ApiMatchResponse) => {
+      console.log("Socket: Match found event received!", newMatch);
+      // Trigger the celebration overlay modal
+      setShowMatchOverlay(newMatch);
+      
+      // Update active matches list state to immediately reflect the new match
+      setActiveMatches(prev => {
+        if (prev.some(m => m.id === newMatch.id)) return prev;
+        return [newMatch, ...prev];
+      });
+
+      // Update pending requests list
+      api.get<ApiRequestsResponse>(`/api/matches/requests?status=pending&page=${currentPage}&limit=9`)
+        .then(res => setRequestsData(res))
+        .catch(err => console.error("Failed to refresh pending requests", err));
+    };
+
+    socket.on('match-found', handleMatchFound);
+
+    return () => {
+      socket.off('match-found', handleMatchFound);
+    };
   }, [currentPage]);
 
   // Fetch event if eventId is present
@@ -205,6 +254,7 @@ export default function MatchesPage() {
           unreadCount: r.unreadCount || 0,
           members: r.members || [],
           chatRoomId: r.chatRoomId || '',
+          funInfo: r.funInfo
         }));
       setActiveMatches(matches.filter(m => m.event && m.event.date));
     } catch (error) {
@@ -553,85 +603,111 @@ export default function MatchesPage() {
               <Users size={16} /> Active Squads
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-              {activeMatches.filter(m => (categoryFilter === "All" || m.event.category?.toLowerCase() === categoryFilter.toLowerCase()) && m.event.name.toLowerCase().includes(searchQuery.toLowerCase())).map((match) => (
-                <Link
+              {activeMatches.filter(m => (categoryFilter === "All" || m.event.category?.toLowerCase() === categoryFilter.toLowerCase()) && m.event.name.toLowerCase().includes(searchQuery.toLowerCase())).map((match, idx) => (
+                <motion.div
                   key={match.id}
-                  href={`/matches/${match.id}`}
-                  className="bg-white border border-slate-200 rounded-[24px] flex flex-col h-full hover:border-slate-300 transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 group relative overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 80, damping: 15, delay: idx * 0.08 }}
+                  className="h-full"
                 >
-                  {match.unreadCount > 0 && (
-                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white text-[13px] font-extrabold rounded-full flex items-center justify-center border-[4px] border-white shadow-lg z-20 animate-pulse">
-                      {match.unreadCount}
-                    </div>
-                  )}
+                  <Link
+                    href={`/matches/${match.id}`}
+                    className="bg-white border border-slate-200 rounded-[24px] flex flex-col h-full hover:border-slate-300 transition-all hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 group relative overflow-hidden"
+                  >
+                    {match.unreadCount > 0 && (
+                      <div className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white text-[13px] font-extrabold rounded-full flex items-center justify-center border-[4px] border-white shadow-lg z-20 animate-pulse">
+                        {match.unreadCount}
+                      </div>
+                    )}
 
-                  <div className="h-32 sm:h-40 relative w-full border-b border-slate-200 bg-slate-50 flex-shrink-0 overflow-hidden mb-6">
-                    <EventImage src={match.event.coverImage || match.event.image} alt={match.event.name} category={match.event.category} />
-                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  </div>
-                  <div className="p-6 md:p-8 pt-6 flex-1 flex flex-col">
-                    <div className="flex items-start justify-between mb-8 gap-4">
-                      <div>
-                        <h3 className="font-sans font-extrabold tracking-tight text-lg md:text-lg leading-tight mb-1.5 md:mb-2 group-hover:text-emerald-600 transition-colors text-slate-900 line-clamp-2 break-words" title={match.event.name.split(/ - |—/)[0].trim()}>
-                          {match.event.name.split(/ - |—/)[0].trim()}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
-                            <Calendar size={13} className="text-slate-400" />
-                            <span>{formatDate(match.event.date)}</span>
-                          </div>
-                          {(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city) && (
+                    <div className="h-32 sm:h-40 relative w-full border-b border-slate-200 bg-slate-50 flex-shrink-0 overflow-hidden mb-6">
+                      <EventImage src={match.event.coverImage || match.event.image} alt={match.event.name} category={match.event.category} />
+                      <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                    <div className="p-6 md:p-8 pt-6 flex-1 flex flex-col">
+                      <div className="flex items-start justify-between mb-8 gap-4">
+                        <div>
+                          <h3 className="font-sans font-extrabold tracking-tight text-lg md:text-lg leading-tight mb-1.5 md:mb-2 group-hover:text-emerald-600 transition-colors text-slate-900 line-clamp-2 break-words" title={match.event.name.split(/ - |—/)[0].trim()}>
+                            {match.event.name.split(/ - |—/)[0].trim()}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2">
                             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
-                              <MapPin size={13} className="text-slate-400" />
-                              <span>{(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city).trim()}</span>
+                              <Calendar size={13} className="text-slate-400" />
+                              <span>{formatDate(match.event.date)}</span>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-500 flex items-center justify-center font-medium text-[14px] group-hover:bg-emerald-500 group-hover:text-white group-shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5 transition-all">
-                        {match.members.length}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="flex -space-x-3">
-                        {match.members.slice(0, 3).map((member) => (
-                          <div key={member.id} className="relative">
-                            {member.photo ? (
-                              <img
-                                src={member.photo}
-                                alt={member.displayName}
-                                className="w-12 h-12 rounded-full border-[2px] border-[white] object-cover bg-slate-100"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full border-[2px] border-[white] bg-slate-100 flex items-center justify-center font-medium text-[13px] text-slate-400">
-                                {member.displayName?.slice(0, 2) || '??'}
+                            {(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city) && (
+                              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 border border-slate-200 rounded-full text-[12px] font-medium text-slate-500">
+                                <MapPin size={13} className="text-slate-400" />
+                                <span>{(match.event.name.split(/ - |—/)[1] || match.event.venue || match.event.city).trim()}</span>
                               </div>
                             )}
                           </div>
-                        ))}
-                        {match.members.length > 3 && (
-                          <div className="w-12 h-12 rounded-full border-[2px] border-[white] bg-[#bbf7d0] flex items-center justify-center font-medium text-[13px] text-[#166534]">
-                            +{match.members.length - 3}
-                          </div>
-                        )}
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-500 flex items-center justify-center font-medium text-[14px] group-hover:bg-emerald-500 group-hover:text-white group-shadow-lg shadow-emerald-500/25 hover:-translate-y-0.5 transition-all">
+                          {match.members.length}
+                        </div>
                       </div>
-                      <div className="text-[13px] text-slate-400 font-medium">
-                        {match.members.length} squad member{match.members.length > 1 ? 's' : ''}
-                      </div>
-                    </div>
 
-                    <div className="mt-auto flex items-center justify-between text-[14px] font-medium pt-5 border-t border-slate-200">
-                      <span className="text-slate-900 flex items-center gap-2">
-                        <Users size={16} />
-                        {match.status === 'confirmed' ? 'Confirmed' : 'Matched'}
-                      </span>
-                      <span className="text-slate-900 flex items-center gap-1 group-hover:gap-2 transition-all">
-                        Open chat <ArrowRight size={16} />
-                      </span>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="flex -space-x-3">
+                          {match.members.slice(0, 3).map((member, i) => (
+                            <motion.div 
+                              key={member.id} 
+                              animate={{ y: [0, -4, 0] }}
+                              transition={{ repeat: Infinity, duration: 2.8, delay: i * 0.2, ease: "easeInOut" }}
+                              className="relative"
+                            >
+                              {member.photo ? (
+                                <img
+                                  src={member.photo}
+                                  alt={member.displayName}
+                                  className="w-12 h-12 rounded-full border-[2px] border-[white] object-cover bg-slate-100 shadow-sm"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full border-[2px] border-[white] bg-slate-100 flex items-center justify-center font-medium text-[13px] text-slate-400 shadow-sm">
+                                  {member.displayName?.slice(0, 2) || '??'}
+                                </div>
+                              )}
+                            </motion.div>
+                          ))}
+                          {match.members.length > 3 && (
+                            <motion.div 
+                              animate={{ y: [0, -4, 0] }}
+                              transition={{ repeat: Infinity, duration: 2.8, delay: 3 * 0.2, ease: "easeInOut" }}
+                              className="w-12 h-12 rounded-full border-[2px] border-[white] bg-[#bbf7d0] flex items-center justify-center font-medium text-[13px] text-[#166534] shadow-sm z-10"
+                            >
+                              +{match.members.length - 3}
+                            </motion.div>
+                          )}
+                        </div>
+                        <div className="text-[13px] text-slate-400 font-medium">
+                          {match.members.length} squad member{match.members.length > 1 ? 's' : ''}
+                        </div>
+                      </div>
+
+                      {match.funInfo && (
+                        <div className="mb-6 p-3 bg-emerald-50 rounded-2xl border border-emerald-100/80 text-[12px] text-emerald-800 font-semibold flex items-center gap-2">
+                          <Sparkles size={14} className="text-emerald-500 animate-pulse shrink-0" />
+                          <span>{match.funInfo}</span>
+                        </div>
+                      )}
+
+                      <div className="mt-auto flex items-center justify-between text-[14px] font-medium pt-5 border-t border-slate-200">
+                        <span className="text-slate-900 flex items-center gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                          {match.status === 'confirmed' ? 'Confirmed' : 'Matched'}
+                        </span>
+                        <span className="text-slate-900 flex items-center gap-1 group-hover:gap-2 transition-all">
+                          Open chat <ArrowRight size={16} />
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </motion.div>
               ))}
             </div>
           </section>
@@ -740,6 +816,127 @@ export default function MatchesPage() {
             </button>
           </div>
         )}
+
+        {/* "It's a Match!" Celebration Overlay (Light Mode) */}
+        <AnimatePresence>
+          {showMatchOverlay && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-white/95 backdrop-blur-xl z-[9999] flex flex-col items-center justify-center p-6 text-slate-900 text-center"
+            >
+              {/* Background elements */}
+              <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#0f172a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+              
+              {/* Glowing background blob */}
+              <div className="absolute w-[300px] h-[300px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+
+              <motion.div
+                initial={{ scale: 0.8, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.8, y: 20 }}
+                transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                className="max-w-md w-full space-y-8 flex flex-col items-center"
+              >
+                {/* Star Badge */}
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                  className="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-400 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-yellow-500/20"
+                >
+                  <Sparkles size={28} className="fill-white" />
+                </motion.div>
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <motion.h1 
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                    className="font-sans font-black tracking-wider text-4xl md:text-5xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 bg-clip-text text-transparent"
+                  >
+                    IT'S A MATCH!
+                  </motion.h1>
+                  <p className="text-slate-600 text-sm md:text-base font-semibold px-4">
+                    You matched for <strong className="text-slate-900">{showMatchOverlay.event.name.split("—")[0]}</strong>!
+                  </p>
+                </div>
+
+                {/* Matching Avatars Collage */}
+                <div className="relative w-full h-32 flex items-center justify-center mt-6">
+                  {/* Avatar A */}
+                  <motion.div 
+                    initial={{ x: -100, opacity: 0, rotate: -20 }}
+                    animate={{ x: -16, opacity: 1, rotate: -6 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.3 }}
+                    className="w-20 h-20 rounded-full border-4 border-emerald-500 overflow-hidden bg-slate-100 shadow-xl shadow-slate-200 z-10"
+                  >
+                    <img 
+                      src={showMatchOverlay.members[0]?.photo || "https://i.pravatar.cc/100?img=11"} 
+                      alt="User" 
+                      className="w-full h-full object-cover" 
+                    />
+                  </motion.div>
+
+                  {/* Pulsing Match Center Icon */}
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", delay: 0.8 }}
+                    className="w-10 h-10 rounded-full bg-emerald-500 border-4 border-white text-white flex items-center justify-center z-20 shadow-md shadow-emerald-500/25"
+                  >
+                    <Sparkles size={14} className="text-white" />
+                  </motion.div>
+
+                  {/* Avatar B */}
+                  <motion.div 
+                    initial={{ x: 100, opacity: 0, rotate: 20 }}
+                    animate={{ x: 16, opacity: 1, rotate: 6 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.35 }}
+                    className="w-20 h-20 rounded-full border-4 border-emerald-500 overflow-hidden bg-slate-100 shadow-xl shadow-slate-200 z-10"
+                  >
+                    <img 
+                      src={showMatchOverlay.members[1]?.photo || showMatchOverlay.members[0]?.photo || "https://i.pravatar.cc/100?img=33"} 
+                      alt="Matched Buddy" 
+                      className="w-full h-full object-cover" 
+                    />
+                  </motion.div>
+                </div>
+
+                {/* Match Description */}
+                {showMatchOverlay.funInfo && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="bg-emerald-50 border border-emerald-100/80 rounded-2xl p-4 max-w-sm shadow-sm"
+                  >
+                    <p className="text-xs text-emerald-800 font-semibold leading-relaxed">
+                      "{showMatchOverlay.funInfo}"
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3 w-full px-8 mt-6">
+                  <Link
+                    href={`/matches/${showMatchOverlay.id}`}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 px-6 rounded-full transition-all text-center shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm"
+                  >
+                    <MessageSquare size={16} />
+                    Open Chat Room
+                  </Link>
+                  <button
+                    onClick={() => setShowMatchOverlay(null)}
+                    className="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 font-bold py-3 px-6 rounded-full transition-all text-sm shadow-sm"
+                  >
+                    Keep Browsing
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

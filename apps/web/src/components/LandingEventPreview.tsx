@@ -232,13 +232,13 @@ export default function LandingEventPreview({
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between">
+                  <div className="mt-auto pt-4 border-t border-slate-200 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[13px] font-medium text-emerald-600">
-                      <div className="w-2 h-2 rounded-full bg-emerald-600" />
-                      {ev.lookingCount || 0} finding buddies
+                      <div className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                      {ev.lookingCount || 0} active
                     </div>
-                    <div className="w-8 h-8 rounded-[8px] bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-900 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white shadow-sm transition-colors">
-                      <span className="font-medium text-[16px]">→</span>
+                    <div className="text-[12px] font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-full px-3.5 py-1.5 flex items-center gap-1 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white shadow-sm transition-all duration-300">
+                      <span>Join</span> <span className="font-sans font-medium text-[14px]">→</span>
                     </div>
                   </div>
                 </div>
