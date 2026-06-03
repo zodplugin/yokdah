@@ -1,11 +1,15 @@
 import mongoose from 'mongoose'
 import { Event } from '../src/models/Event'
-import { MONGODB_URI, extractNextData, fetchText, findLikelyEventArrays, inferCategory } from './scrape-utils'
+import { MONGODB_URI, extractEventsFromJsonLd, extractNextData, fetchText, findLikelyEventArrays, inferCategory } from './scrape-utils'
 
 const BASE_URL = 'https://www.tix.id'
 const LIST_URL = 'https://www.tix.id/events'
 
 type AnyObj = Record<string, any>
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
 function pickFirstString(obj: AnyObj, keys: string[]) {
   for (const k of keys) {
@@ -27,6 +31,89 @@ function toTicketUrl(slugOrUrl: string) {
   if (slugOrUrl.startsWith('http://') || slugOrUrl.startsWith('https://')) return slugOrUrl
   if (slugOrUrl.startsWith('/')) return `${BASE_URL}${slugOrUrl}`
   return `${BASE_URL}/events/${slugOrUrl}`
+}
+
+function extractEventSlugs(html: string): string[] {
+  const slugs = new Set<string>()
+  const re = /href\s*=\s*["'](?:https?:\/\/(?:www\.)?tix\.id)?\/events\/([^"'?#\s/]+)[^"']*["']/gi
+  let match: RegExpExecArray | null
+  while ((match = re.exec(html))) {
+    const slug = match[1]
+    if (slug) slugs.add(slug)
+  }
+  return Array.from(slugs)
+}
+
+function mapJsonLdEventToEvent(ld: AnyObj) {
+  const name = pickFirstString(ld, ['name'])
+  const start = ld.startDate || ld.start_date
+  const date = parseDateMaybe(start)
+  const location = ld.location || {}
+  const venue =
+    (typeof location === 'object' ? pickFirstString(location, ['name']) : '') ||
+    (typeof ld.locationName === 'string' ? ld.locationName : '') ||
+    'TBA'
+  const address = typeof location === 'object' ? (location.address || {}) : {}
+  const city =
+    (typeof address === 'object' ? pickFirstString(address, ['addressLocality', 'addressRegion']) : '') ||
+    pickFirstString(ld, ['city', 'region']) ||
+    'Unknown'
+
+  const image = Array.isArray(ld.image) ? ld.image[0] : ld.image
+  const coverImage = typeof image === 'string' && image ? image : 'https://via.placeholder.com/800x400?text=No+Image'
+  const url = pickFirstString(ld, ['url']) || BASE_URL
+  const sourceId = url ? url : (name ? name : '')
+
+  if (!name || !date) return null
+
+  return {
+    name,
+    venue,
+    city,
+    date,
+    endTime: parseDateMaybe(ld.endDate || ld.end_date),
+    category: inferCategory(name),
+    description: `Experience ${name} at ${venue}. Tickets available on TIX ID.`,
+    coverImage,
+    ticketUrl: url,
+    source: 'tixid',
+    sourceId,
+    status: 'active' as const,
+    location_name: venue,
+  }
+}
+
+async function scrapeDetail(slug: string) {
+  const url = `${BASE_URL}/events/${slug}`
+  const html = await fetchText(url, { headers: { Referer: LIST_URL } })
+  const ldEvents = extractEventsFromJsonLd(html)
+  for (const ev of ldEvents) {
+    const mapped = mapJsonLdEventToEvent(ev)
+    if (mapped) {
+      mapped.ticketUrl = url
+      mapped.sourceId = slug
+      return mapped
+    }
+  }
+
+  // fallback minimal: use <title> as name
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
+  const name = titleMatch ? String(titleMatch[1]).replace(/\s+/g, ' ').trim() : ''
+  if (!name) return null
+  return {
+    name,
+    venue: 'TBA',
+    city: 'Unknown',
+    date: new Date(),
+    category: inferCategory(name),
+    description: `Experience ${name}. Tickets available on TIX ID.`,
+    coverImage: 'https://via.placeholder.com/800x400?text=No+Image',
+    ticketUrl: url,
+    source: 'tixid',
+    sourceId: slug,
+    status: 'pending_review' as const,
+    location_name: 'TBA',
+  }
 }
 
 function mapAnyToEvent(candidate: AnyObj) {
@@ -89,7 +176,77 @@ async function scrapeTixId() {
 
     const nextData = extractNextData(html)
     if (!nextData) {
-      throw new Error('TIX ID: could not find __NEXT_DATA__. Site may block bots or use a different renderer.')
+      // Fallback A: JSON-LD event list on page
+      const ldEvents = extractEventsFromJsonLd(html)
+      const mappedLd = ldEvents.map(mapJsonLdEventToEvent).filter(Boolean) as any[]
+
+      if (mappedLd.length > 0) {
+        console.log(`TIX ID fallback JSON-LD: mapped ${mappedLd.length} events`)
+        let imported = 0
+        let skipped = 0
+        for (const ev of mappedLd) {
+          try {
+            await Event.findOneAndUpdate(
+              { source: 'tixid', sourceId: ev.sourceId },
+              ev,
+              { upsert: true, new: true }
+            )
+            imported++
+          } catch (err) {
+            console.error(`Error importing TIX ID event ${ev.name}:`, err)
+            skipped++
+          }
+        }
+        console.log('--- TIX ID Import Summary (JSON-LD) ---')
+        console.log(`Total events mapped: ${mappedLd.length}`)
+        console.log(`Successfully imported/updated: ${imported}`)
+        console.log(`Failed/Skipped: ${skipped}`)
+        console.log('--------------------------------------')
+        process.exit(0)
+      }
+
+      // Fallback B: crawl event links from listing page
+      const slugs = extractEventSlugs(html)
+      if (slugs.length === 0) {
+        const looksBlocked =
+          /forbidden|access denied|just a moment|captcha|cloudflare/i.test(html) ||
+          /__cf_chl|cf-chl/i.test(html)
+      if (looksBlocked) {
+        throw new Error('TIX ID: access blocked (likely Cloudflare/CAPTCHA). Scraping needs browser-based approach.')
+      }
+      throw new Error('TIX ID: could not find __NEXT_DATA__, no JSON-LD events, and no /events/* links found.')
+    }
+
+      console.log(`TIX ID fallback: found ${slugs.length} event links. Fetching details...`)
+      let importedCount = 0
+      let skippedCount = 0
+      for (const slug of slugs.slice(0, 60)) {
+        try {
+          const ev = await scrapeDetail(slug)
+          if (!ev) {
+            skippedCount++
+            continue
+          }
+          await Event.findOneAndUpdate(
+            { source: 'tixid', sourceId: ev.sourceId },
+            ev,
+            { upsert: true, new: true }
+          )
+          importedCount++
+        } catch (err) {
+          console.error(`Error importing TIX ID event ${slug}:`, (err as any)?.message || err)
+          skippedCount++
+        }
+        await sleep(200)
+      }
+
+      console.log('--- TIX ID Import Summary (fallback crawl) ---')
+      console.log(`Total event links found: ${slugs.length}`)
+      console.log(`Successfully imported/updated: ${importedCount}`)
+      console.log(`Failed/Skipped: ${skippedCount}`)
+      console.log('---------------------------------------------')
+
+      process.exit(0)
     }
 
     const arrays = findLikelyEventArrays(nextData)
@@ -136,4 +293,3 @@ async function scrapeTixId() {
 }
 
 scrapeTixId()
-

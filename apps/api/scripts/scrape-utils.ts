@@ -85,6 +85,53 @@ export function extractNextData(html: string): any | null {
   }
 }
 
+export function extractJsonLd(html: string): any[] {
+  const results: any[] = []
+  const re = /<script\b[^>]*type\s*=\s*(?:"application\/ld\+json"|'application\/ld\+json'|application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/gi
+  let match: RegExpExecArray | null
+  while ((match = re.exec(html))) {
+    const raw = (match[1] || '').trim()
+    if (!raw) continue
+    try {
+      results.push(JSON.parse(raw))
+    } catch {
+      // ignore
+    }
+  }
+  return results
+}
+
+function normalizeToArray(value: any): any[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  return [value]
+}
+
+export function extractEventsFromJsonLd(html: string): any[] {
+  const blocks = extractJsonLd(html)
+  const events: any[] = []
+
+  const visit = (node: any) => {
+    if (!node) return
+    if (Array.isArray(node)) {
+      node.forEach(visit)
+      return
+    }
+    if (typeof node !== 'object') return
+
+    const type = node['@type']
+    if (type) {
+      const types = normalizeToArray(type).map((t) => String(t).toLowerCase())
+      if (types.includes('event')) events.push(node)
+    }
+
+    if (node['@graph']) visit(node['@graph'])
+  }
+
+  blocks.forEach(visit)
+  return events
+}
+
 export function walk(obj: any, visitor: (value: any, path: string) => void, pathStr = '$', depth = 0) {
   if (depth > 12) return
   visitor(obj, pathStr)
