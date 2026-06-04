@@ -186,7 +186,9 @@ export default function EventsPage() {
                         <MapPin size={18} />
                     </div>
                     <div>
-                        <h3 className="font-medium text-[15px] leading-tight mb-0.5">Events near {selectedCity}</h3>
+                        <h3 className="font-medium text-[15px] leading-tight mb-0.5">
+                            {selectedCity ? `Events near ${selectedCity}` : "Events across all locations"}
+                        </h3>
                         <p className="text-[13px] text-slate-500">Showing tailored recommendations based on your preferences and location.</p>
                     </div>
                 </div>
@@ -195,7 +197,7 @@ export default function EventsPage() {
                         onClick={() => setShowCityDropdown(!showCityDropdown)}
                         className="text-[13px] font-medium text-slate-900 transition-colors bg-slate-50 border border-slate-200 px-4 py-2 rounded-[100px] hover:bg-slate-50 whitespace-nowrap flex items-center gap-2"
                     >
-                        Change location <ChevronDown size={14} />
+                        {selectedCity || "All locations"} <ChevronDown size={14} />
                     </button>
 
                     {/* City Dropdown */}
@@ -209,21 +211,30 @@ export default function EventsPage() {
                                     <div className="flex items-center justify-center py-8">
                                         <div className="w-5 h-5 border-2 border-slate-200 border-t-emerald-500 rounded-full animate-spin"></div>
                                     </div>
-                                ) : availableCities.length === 0 ? (
-                                    <div className="px-4 py-6 text-[13px] text-slate-400 text-center">No cities found</div>
                                 ) : (
-                                    availableCities.map((city) => (
+                                    <>
                                         <button
-                                            key={city}
-                                            onClick={() => handleCitySelect(city)}
-                                            className={`w-full text-left px-4 py-3 text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-between ${selectedCity === city ? 'bg-emerald-50 text-emerald-600' : 'text-slate-900'}`}
+                                            onClick={() => handleCitySelect("")}
+                                            className={`w-full text-left px-4 py-3 text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-between ${!selectedCity ? 'bg-emerald-50 text-emerald-600' : 'text-slate-900'}`}
                                         >
-                                            <span>{city}</span>
-                                            {selectedCity === city && (
+                                            <span>All Locations</span>
+                                            {!selectedCity && (
                                                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                             )}
                                         </button>
-                                    ))
+                                        {availableCities.map((city) => (
+                                            <button
+                                                key={city}
+                                                onClick={() => handleCitySelect(city)}
+                                                className={`w-full text-left px-4 py-3 text-[14px] font-medium hover:bg-slate-50 transition-colors flex items-center justify-between ${selectedCity === city ? 'bg-emerald-50 text-emerald-600' : 'text-slate-900'}`}
+                                            >
+                                                <span>{city}</span>
+                                                {selectedCity === city && (
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </>
                                 )}
                             </div>
                         </div>

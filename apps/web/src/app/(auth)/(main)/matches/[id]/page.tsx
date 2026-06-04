@@ -1,6 +1,6 @@
 "use client";
 
-import { Send, Image as ImageIcon, ArrowLeft, Info, MoreHorizontal, User, CheckCircle2, Timer, AlertCircle, X, Target, Flame, Loader2, Reply, Pin, MapPin } from "lucide-react";
+import { Send, Image as ImageIcon, ArrowLeft, Info, MoreHorizontal, User, CheckCircle2, Timer, AlertCircle, X, Target, Flame, Loader2, Reply, Pin, MapPin, Clock, Check, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -89,6 +89,7 @@ export default function MatchChat() {
                                 replyTo: data.replyTo || null,
                                 senderId: data.senderId,
                                 isSystem: isSys,
+                                readBy: data.readBy || [],
                                 createdAt: data.timestamp || data.createdAt || new Date().toISOString()
                             };
 
@@ -99,6 +100,13 @@ export default function MatchChat() {
 
                             return [...prev, formattedMsg];
                         });
+
+                        // Automatically mark new messages from others as read
+                        const sId = data.senderId?._id || data.senderId?.id || data.senderId;
+                        const readByList = data.readBy || [];
+                        if (sId !== currentUser?.id && !readByList.includes(currentUser?.id)) {
+                            api.patch(`/api/chats/${matchData.chatRoomId}/messages/${incomingId}/read`, {}).catch(() => {});
+                        }
                     };
                     socket.on('new-message', handleNewMessage);
 
@@ -159,6 +167,16 @@ export default function MatchChat() {
                         setMessages(msgsData.messages);
                         if (msgsData.messages.length < 50) setHasMore(false);
                         setTimeout(() => messagesEndRef.current?.scrollIntoView(), 150);
+
+                        // Automatically mark fetched unread messages as read
+                        const unread = msgsData.messages.filter((m: any) => {
+                            const sId = m.senderId?._id || m.senderId?.id || m.senderId;
+                            const readByList = m.readBy || [];
+                            return sId !== currentUser?.id && !readByList.includes(currentUser?.id);
+                        });
+                        unread.forEach((m: any) => {
+                            api.patch(`/api/chats/${matchData.chatRoomId}/messages/${m._id || m.id}/read`, {}).catch(() => {});
+                        });
                     }
 
                     return () => {
@@ -244,11 +262,33 @@ export default function MatchChat() {
 
         const messageContent = msg.trim();
         const photoToUpload = pendingPhoto;
+        const tempPhotoUrl = pendingPhotoUrl;
         setMsg("");
         setPendingPhoto(null);
         setPendingPhotoUrl(null);
         const currentReply = replyingTo;
         setReplyingTo(null);
+
+        // Optimistic message update
+        const tempId = 'temp-' + Date.now();
+        const optimisticMsg = {
+            _id: tempId,
+            content: messageContent,
+            photoUrl: tempPhotoUrl || undefined,
+            type: tempPhotoUrl ? 'photo' : 'text',
+            replyToId: currentReply?._id,
+            replyTo: currentReply,
+            senderId: {
+                _id: currentUser.id,
+                displayName: currentUser.displayName,
+                photo: currentUser.photo
+            },
+            createdAt: new Date().toISOString(),
+            isOptimistic: true
+        };
+
+        setMessages(prev => [...prev, optimisticMsg]);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
 
         try {
             let photoUrl: string | undefined;
@@ -263,23 +303,19 @@ export default function MatchChat() {
 
             socket.sendMessage(matchInfo.chatRoomId, messageContent, photoUrl, currentReply, newMsg._id);
 
-            setMessages(prev => [...prev, {
-                _id: newMsg._id || Date.now().toString(),
-                content: messageContent,
-                photoUrl,
-                type: photoUrl ? 'photo' : 'text',
-                replyToId: currentReply?._id,
+            setMessages(prev => prev.map(m => m._id === tempId ? {
+                ...newMsg,
                 replyTo: currentReply,
                 senderId: {
-                    _id: currentUser.id, // from /api/users/profile
+                    _id: currentUser.id,
                     displayName: currentUser.displayName,
                     photo: currentUser.photo
-                },
-                createdAt: new Date().toISOString()
-            }]);
+                }
+            } : m));
             setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
         } catch (err) {
             console.error("Failed to send message", err);
+            setMessages(prev => prev.filter(m => m._id !== tempId));
             setMsg(messageContent);
             setPendingPhoto(photoToUpload);
             setReplyingTo(currentReply);
@@ -447,6 +483,14 @@ export default function MatchChat() {
                         const isMe = sender._id === currentUser?.id;
                         const showName = !isMe && (i === 0 || getSenderInfo(messages[i - 1].senderId)._id !== sender._id);
 
+                        const readMembers = (m.readBy || [])
+                            .filter((uid: string) => uid !== currentUser?.id)
+                            .map((uid: string) => {
+                                const mem = matchInfo?.members?.find((member: any) => member.id?.toString() === uid.toString());
+                                return mem?.displayName?.split(' ')[0] || null;
+                            })
+                            .filter(Boolean);
+
                         return (
                             <div key={m._id || i} id={`msg-${m._id}`} className={`flex gap-3 max-w-2xl animate-fadeUp relative group transition-colors duration-500 ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
 
@@ -478,7 +522,7 @@ export default function MatchChat() {
                                                 </button>
                                             </div>
                                         )}
-                                        <div className={`border rounded-[18px] px-5 py-3 text-[15px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] whitespace-pre-wrap break-words ${isMe
+                                        <div className={`border rounded-[18px] px-5 py-3 text-[15px] shadow-[0_1px_2px_rgba(0,0,0,0.02)] whitespace-pre-wrap break-words flex flex-col ${isMe
                                             ? 'bg-emerald-500 border-emerald-500 text-white rounded-tr-sm'
                                             : 'bg-slate-50 border-slate-200 text-slate-900 rounded-tl-sm'
                                             }`}>
@@ -504,7 +548,24 @@ export default function MatchChat() {
                                                     onClick={() => setPreviewImage(m.photoUrl)}
                                                 />
                                             )}
-                                            {m.content}
+                                            <span>{m.content}</span>
+                                            
+                                            <div className="flex items-center justify-end gap-1 mt-1.5 opacity-60 text-[10px] self-end">
+                                                <span>
+                                                    {new Date(m.createdAt || m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {isMe && (
+                                                    m.isOptimistic ? (
+                                                        <Clock size={10} className="animate-pulse" />
+                                                    ) : (
+                                                        readMembers.length > 0 ? (
+                                                            <CheckCheck size={12} className="text-emerald-200" />
+                                                        ) : (
+                                                            <Check size={12} className="text-white/80" />
+                                                        )
+                                                    )
+                                                )}
+                                            </div>
                                         </div>
                                         {!isMe && (
                                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity flex-shrink-0">
@@ -517,6 +578,11 @@ export default function MatchChat() {
                                             </div>
                                         )}
                                     </div>
+                                    {isMe && readMembers.length > 0 && (
+                                        <span className="text-[10px] text-[var(--muted2)] mt-1 mr-1">
+                                            Read by {readMembers.join(', ')}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         );
