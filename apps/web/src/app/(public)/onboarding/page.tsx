@@ -29,6 +29,7 @@ export default function Onboarding() {
     ]
 
     const [formData, setFormData] = useState({
+        whatsappNumber: '',
         displayName: '',
         age: '',
         gender: '',
@@ -46,7 +47,14 @@ export default function Onboarding() {
     useEffect(() => {
         const tempUserStr = localStorage.getItem('tempUser');
         if (tempUserStr) {
-            setTempUser(JSON.parse(tempUserStr));
+            const parsed = JSON.parse(tempUserStr);
+            setTempUser(parsed);
+            setFormData(prev => ({
+                ...prev,
+                whatsappNumber: parsed.whatsappNumber || '',
+                displayName: parsed.displayName || '',
+                photoPreview: parsed.photo || ''
+            }));
         } else {
             router.push('/login');
         }
@@ -54,6 +62,10 @@ export default function Onboarding() {
 
     const nextStep = () => {
         if (step === 1) {
+            if (!tempUser?.whatsappNumber && !formData.whatsappNumber) {
+                alert('Please enter your WhatsApp number');
+                return;
+            }
             if (!formData.displayName || !formData.age || !formData.gender) {
                 alert('Please fill in all fields');
                 return;
@@ -63,7 +75,7 @@ export default function Onboarding() {
                 return;
             }
         }
-        if (step === 2 && !formData.photo) {
+        if (step === 2 && !formData.photo && !formData.photoPreview) {
             alert('Please upload a photo');
             return;
         }
@@ -115,7 +127,7 @@ export default function Onboarding() {
 
         setIsLoading(true);
         try {
-            let photoUrl = '';
+            let photoUrl = formData.photoPreview || '';
             if (formData.photo) {
                 try {
                     const uploadResult = await uploadClient.uploadImage(formData.photo);
@@ -134,6 +146,7 @@ export default function Onboarding() {
                     'Authorization': `Bearer ${localStorage.getItem('tempToken')}`
                 },
                 body: JSON.stringify({
+                    whatsappNumber: !tempUser?.whatsappNumber ? formData.whatsappNumber : undefined,
                     displayName: formData.displayName,
                     age: formData.age,
                     gender: formData.gender,
@@ -153,7 +166,6 @@ export default function Onboarding() {
                 localStorage.setItem('user', JSON.stringify(data.user));
                 localStorage.removeItem('tempToken');
                 localStorage.removeItem('tempUser');
-                // Redirect to the original destination or default to events
                 const redirect = typeof window !== 'undefined'
                     ? new URLSearchParams(window.location.search).get('redirect')
                     : null;
@@ -218,6 +230,20 @@ export default function Onboarding() {
                             </h1>
 
                             <div className="space-y-6">
+                                {!tempUser?.whatsappNumber && (
+                                    <div>
+                                        <label className="block text-[13px] font-medium text-slate-500 mb-2 ml-1">WhatsApp Number</label>
+                                        <input 
+                                            type="tel" 
+                                            placeholder="081234567890" 
+                                            value={formData.whatsappNumber}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+                                            className="w-full bg-white border border-slate-200 rounded-[10px] px-4 py-3.5 text-[15px] outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all" 
+                                        />
+                                        <p className="text-[12px] text-slate-400 mt-1 ml-1">For notifications and match updates</p>
+                                    </div>
+                                )}
+
                                 <div>
                                     <label className="block text-[13px] font-medium text-slate-500 mb-2 ml-1">Display Name</label>
                                     <input 

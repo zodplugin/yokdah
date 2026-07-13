@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, FlatList, TextInput, KeyboardAvoidingView, Platform, Alert, Modal, Pressable } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, FlatList, TextInput, KeyboardAvoidingView, Platform, Alert, Modal, Pressable, LayoutAnimation } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -46,10 +46,21 @@ export default function ChatScreen() {
         const chatId = payload.chatId || payload.chatRoomId;
         
         if (chatId === chatRoomId) {
+          if (Platform.OS === 'ios' || Platform.OS === 'android') {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          }
           setMessages(prev => {
             if (prev.find(m => (m._id || m.id) === (message._id || message.id))) return prev;
             return [...prev, message];
           });
+
+          // Mark as read if sent by someone else and we haven't read it yet
+          const messageId = message._id || message.id;
+          const sId = message.senderId?._id || message.senderId?.id || message.senderId;
+          const readByList = message.readBy || [];
+          if (sId !== currentUser?.id && !readByList.includes(currentUser?.id)) {
+            api.patch(`/api/chats/${chatRoomId}/messages/${messageId}/read`, {}).catch(() => {});
+          }
         }
       };
 
@@ -98,8 +109,18 @@ export default function ChatScreen() {
       
       const chatRes: any = await api.get(`/api/chats/${chatRoomId}/messages?limit=25`);
       console.log('Fetched Messages:', chatRes.messages?.length);
-      setMessages(chatRes.messages || []);
+       setMessages(chatRes.messages || []);
       setHasMore(chatRes.messages?.length === 25);
+
+      // Automatically mark fetched unread messages as read
+      const unreadMsgs = (chatRes.messages || []).filter((m: any) => {
+        const sId = m.senderId?._id || m.senderId?.id || m.senderId;
+        const readByList = m.readBy || [];
+        return sId !== currentUser?.id && !readByList.includes(currentUser?.id);
+      });
+      unreadMsgs.forEach((m: any) => {
+        api.patch(`/api/chats/${chatRoomId}/messages/${m._id || m.id}/read`, {}).catch(() => {});
+      });
     } catch (error) {
       console.error("Fetch Match/Chat Error:", error);
       Alert.alert("Error", "Failed to load chat. Please check your connection.");
@@ -130,7 +151,7 @@ export default function ChatScreen() {
 
   const sendMessage = async () => {
     const chatRoomId = chatRoom?.id || chatRoom?._id;
-    if (!msg.trim() || !chatRoomId || sending) return;
+    if (!msg.trim() || !chatRoomId) return;
 
     const content = msg.trim();
     const replyId = replyingTo?._id || replyingTo?.id;
@@ -207,6 +228,14 @@ export default function ChatScreen() {
     const isFirstInGroup = !prevMsg || getSenderInfo(prevMsg.senderId).id !== sender.id;
     const isLastInGroup = !nextMsg || getSenderInfo(nextMsg.senderId).id !== sender.id;
 
+    const readMembers = (item.readBy || [])
+      .filter((uid: string) => uid !== currentUser?.id)
+      .map((uid: string) => {
+        const m = chatRoom?.members?.find((member: any) => (member.id || member._id)?.toString() === uid.toString());
+        return m?.displayName?.split(' ')[0] || null;
+      })
+      .filter(Boolean);
+
     return (
       <View style={[
         styles.messageWrapper, 
@@ -261,15 +290,29 @@ export default function ChatScreen() {
             <Text style={[styles.messageText, { color: isMe ? theme.accent_text : theme.text }]}>
               {item.content}
             </Text>
-            <View style={styles.bubbleFooter}>
-               <Text style={[styles.timestamp, { color: isMe ? 'rgba(255,255,255,0.6)' : theme.muted }]}>
-                {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-               {item.isOptimistic && (
-                 <IconSymbol name="clock.fill" size={8} color="rgba(255,255,255,0.6)" style={{ marginLeft: 4 }} />
-               )}
-            </View>
+             <View style={styles.bubbleFooter}>
+                <Text style={[styles.timestamp, { color: isMe ? 'rgba(255,255,255,0.6)' : theme.muted }]}>
+                 {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+               </Text>
+                {isMe && (
+                  item.isOptimistic ? (
+                    <IconSymbol name="clock.fill" size={8} color="rgba(255,255,255,0.6)" style={{ marginLeft: 4 }} />
+                  ) : (
+                    <IconSymbol 
+                      name={readMembers.length > 0 ? "checkmark.double" : "checkmark"} 
+                      size={10} 
+                      color={readMembers.length > 0 ? "#4ade80" : "rgba(255,255,255,0.6)"} 
+                      style={{ marginLeft: 4 }} 
+                    />
+                  )
+                )}
+             </View>
           </Pressable>
+          {isMe && readMembers.length > 0 && (
+            <Text style={[styles.readByText, { color: theme.muted2 }]}>
+              Read by {readMembers.join(', ')}
+            </Text>
+          )}
         </View>
       </View>
     );
@@ -396,10 +439,10 @@ export default function ChatScreen() {
             />
             <TouchableOpacity 
               onPress={sendMessage} 
-              disabled={!msg.trim() || sending}
+              disabled={!msg.trim()}
               style={[styles.sendBtn, { backgroundColor: msg.trim() ? theme.accent : theme.border }]}
             >
-              {sending ? <ActivityIndicator size="small" color="#000" /> : <IconSymbol name="arrow.up" size={18} color={msg.trim() ? theme.accent_text : theme.muted} />}
+              <IconSymbol name="arrow.up" size={18} color={msg.trim() ? theme.accent_text : theme.muted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -506,6 +549,7 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 15, lineHeight: 21 },
   bubbleFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 },
   timestamp: { fontSize: 9, fontWeight: '500' },
+  readByText: { fontSize: 10, alignSelf: 'flex-end', marginRight: 4, marginTop: 2 },
   replyBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1 },
   replyBarIndicator: { width: 4, height: '100%', borderRadius: 2 },
   replyBarName: { fontSize: 11, fontWeight: '700' },

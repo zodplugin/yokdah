@@ -30,6 +30,7 @@ const MAPPING = {
   'arrow.right': 'arrow-forward',
   'camera.fill': 'photo-camera',
   'checkmark': 'check',
+  'checkmark.double': 'done-all',
   'rectangle.portrait.and.arrow.right': 'logout',
   'gearshape.fill': 'settings',
   'bell.fill': 'notifications',

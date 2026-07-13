@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import api from '@/lib/api';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Link, useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import RadarPulse from '@/components/ui/RadarPulse';
 
 export default function MatchesScreen() {
   const { eventId } = useLocalSearchParams();
@@ -175,8 +176,8 @@ export default function MatchesScreen() {
         </TouchableOpacity>
       </View>
       <View style={[styles.pendingFooter, { borderTopColor: theme.border }]}>
-        <View style={[styles.dot, { backgroundColor: '#f59e0b' }]} />
-        <Text style={[styles.pendingStatus, { color: theme.muted2 }]}>Searching for your squad...</Text>
+        <RadarPulse color={theme.accent} size={8} />
+        <Text style={[styles.pendingStatus, { color: theme.muted2, marginLeft: 4 }]}>Searching for your squad...</Text>
       </View>
     </View>
   );

@@ -2,12 +2,13 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import path from 'path'
 import { Event } from '../src/models/Event'
+import { fetchText, extractNextData } from './scrape-utils'
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fomoin'
-const API_URL = 'https://www.kiostix.com/api/kiostix/events'
+const TARGET_URL = 'https://www.kiostix.com/e'
 const IMAGE_BASE_URL = 'https://staticassets.kiostix.com/'
 
 function inferCategory(name: string): 'concert' | 'festival' | 'party' | 'activity' | 'sport' {
@@ -26,33 +27,22 @@ async function scrapeKiostix() {
     await mongoose.connect(MONGODB_URI)
     console.log('Connected successfully.')
 
-    console.log(`Fetching data from ${API_URL} (POST)...`)
+    console.log(`Fetching data from ${TARGET_URL}...`)
     let externalEvents = []
     
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Content-Type': 'application/json;charset=UTF-8',
-          'Origin': 'https://www.kiostix.com',
-          'Referer': 'https://www.kiostix.com/',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36'
-        },
-        body: JSON.stringify({ page: 1, limit: 100 })
-      })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Failed to fetch: ${response.statusText}`, errorText)
-        throw new Error(`Failed to fetch: ${response.statusText}`)
+      const html = await fetchText(TARGET_URL)
+      console.log('Page HTML fetched. Extracting event data from __NEXT_DATA__...')
+      const nextData = extractNextData(html)
+      if (!nextData) {
+        throw new Error('Could not find __NEXT_DATA__ in page HTML')
       }
-
-      const responseText = await response.text()
-      const externalEventsData = JSON.parse(responseText)
-      externalEvents = externalEventsData.data || []
+      
+      const kiostixEvents = nextData.props?.pageProps?.kiostixEvents
+      externalEvents = kiostixEvents?.data || []
+      console.log(`Successfully extracted ${externalEvents.length} events from __NEXT_DATA__.`)
     } catch (fetchError) {
-      console.warn('Live fetch failed. Using fallback data provided by user...')
+      console.warn('Live fetch failed. Using fallback data provided by user...', fetchError)
       // Fallback data provided by the user in the prompt
       externalEvents = [
         {

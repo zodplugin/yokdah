@@ -71,7 +71,7 @@ export async function fetchText(url: string, init?: RequestInit) {
 export function extractNextData(html: string): any | null {
   // Next.js app data usually lives in: <script id="__NEXT_DATA__" type="application/json">...</script>
   // Some deployments omit quotes around the id or minify attributes, so we use a permissive regex.
-  const re = /<script\b[^>]*\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__'|__NEXT_DATA__)\b[^>]*>([\s\S]*?)<\/script>/i
+  const re = /<script\b[^>]*\bid\s*=\s*(?:"__NEXT_DATA__"|'__NEXT_DATA__'|__NEXT_DATA__)[^>]*>([\s\S]*?)<\/script>/i
   const match = html.match(re)
   if (!match) return null
 

@@ -167,19 +167,6 @@ export default function MatchesPage() {
         // Filter out matches with missing events/dates
         const validMatches = matches.filter(m => m.event && m.event.date);
         setActiveMatches(validMatches);
-
-        // Compare and detect if there is a new match
-        const validMatchIds = validMatches.map(m => m.id);
-        if (isFirstLoad.current) {
-          setKnownMatchIds(validMatchIds);
-          isFirstLoad.current = false;
-        } else {
-          const newMatch = validMatches.find(m => !knownMatchIds.includes(m.id));
-          if (newMatch) {
-            setShowMatchOverlay(newMatch);
-            setKnownMatchIds(validMatchIds);
-          }
-        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -782,7 +769,19 @@ export default function MatchesPage() {
                     </div>
 
                     <div className="mt-auto pt-4 border-t border-slate-200 flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse"></div>
+                      <div className="relative w-5 h-5 flex items-center justify-center mr-1">
+                        <motion.div
+                          animate={{ scale: [1, 2.2, 2.8], opacity: [0.6, 0.3, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.8, ease: "easeOut" }}
+                          className="absolute w-4 h-4 rounded-full bg-emerald-500/40"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.8, 2.4], opacity: [0.6, 0.2, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.8, delay: 0.6, ease: "easeOut" }}
+                          className="absolute w-4 h-4 rounded-full bg-emerald-500/30"
+                        />
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 relative z-10 shadow-sm shadow-emerald-500/50" />
+                      </div>
                       <span className="text-[13px] text-slate-400 font-medium">
                         Matching in progress...
                       </span>
@@ -864,6 +863,38 @@ export default function MatchesPage() {
 
                 {/* Matching Avatars Collage */}
                 <div className="relative w-full h-32 flex items-center justify-center mt-6">
+                  {/* Floating confetti particles */}
+                  {[...Array(24)].map((_, i) => {
+                    const angle = (i / 24) * 360 + (Math.random() * 15 - 7.5);
+                    const rad = (angle * Math.PI) / 180;
+                    const distance = 100 + Math.random() * 140;
+                    const x = Math.cos(rad) * distance;
+                    const y = Math.sin(rad) * distance;
+                    const colors = ["#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6", "#fb7185"];
+                    const randomColor = colors[i % colors.length];
+
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                        animate={{ 
+                          x: x, 
+                          y: y, 
+                          scale: [0, 1.3, 0.8, 0],
+                          opacity: [1, 1, 0.7, 0],
+                          rotate: [0, Math.random() * 360 + 180] 
+                        }}
+                        transition={{ 
+                          duration: 2 + Math.random() * 1.2, 
+                          ease: "easeOut",
+                          delay: 0.7 
+                        }}
+                        className="absolute w-2 h-4 rounded-[2px]"
+                        style={{ backgroundColor: randomColor }}
+                      />
+                    );
+                  })}
+
                   {/* Avatar A */}
                   <motion.div 
                     initial={{ x: -100, opacity: 0, rotate: -20 }}

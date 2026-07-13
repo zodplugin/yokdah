@@ -37,6 +37,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
+    "google-auth-library": "^10.9.0",
     "imagekit": "^5.2.0",
     "ioredis": "^5.4.1",
     "mongoose": "^8.9.2",

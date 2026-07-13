@@ -4,7 +4,7 @@ export async function connectDatabase() {
   try {
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/fomoin'
     await mongoose.connect(uri)
-    console.log('MongoDB connected successfully')
+    console.log(`MongoDB connected successfully to: ${uri} (db: ${mongoose.connection.db?.databaseName})`)
   } catch (error) {
     console.error('MongoDB connection error:', error)
     process.exit(1)

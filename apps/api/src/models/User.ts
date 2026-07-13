@@ -20,6 +20,7 @@ export interface IUser extends Document {
   blockedUsers: string[]
   role: 'user' | 'admin'
   oneSignalSubscriptionId?: string
+  googleId?: string
   otp?: string
   otpExpires?: Date
   createdAt: Date
@@ -40,6 +41,11 @@ const userSchema = new Schema<IUser>(
       required: true,
       unique: true,
       trim: true
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
     },
     displayName: {
       type: String,
@@ -135,6 +141,7 @@ const userSchema = new Schema<IUser>(
 
 userSchema.index({ email: 1 })
 userSchema.index({ whatsappNumber: 1 })
+userSchema.index({ googleId: 1 })
 userSchema.index({ reliabilityScore: 1 })
 
 export const User = mongoose.model<IUser>('User', userSchema)

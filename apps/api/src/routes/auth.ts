@@ -1,8 +1,108 @@
 import { FastifyInstance } from 'fastify'
 import { User } from '../models/User'
 import { sendWhatsApp, formatWhatsAppNumber, getMagicLinkMessage } from '../utils/whatsapp'
+import { OAuth2Client } from 'google-auth-library'
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 export async function authRoutes(fastify: FastifyInstance) {
+  fastify.post('/google', async (request: any, reply) => {
+    const { credential } = request.body
+
+    if (!credential) {
+      return reply.code(400).send({ error: 'Credential is required' })
+    }
+
+    try {
+      let payload: any
+      if (!process.env.GOOGLE_CLIENT_ID && process.env.NODE_ENV !== 'production') {
+        // In local development without Google Client ID, decode JWT payload directly for testing
+        try {
+          const parts = credential.split('.')
+          payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'))
+        } catch (e) {
+          throw new Error('Failed to decode mock token')
+        }
+      } else {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID
+        })
+        payload = ticket.getPayload()
+      }
+
+      if (!payload) {
+        return reply.code(400).send({ error: 'Invalid token payload' })
+      }
+
+      const { sub, email, name, picture } = payload
+
+      if (!email) {
+        return reply.code(400).send({ error: 'Google account does not have an email' })
+      }
+
+      let user = await User.findOne({
+        $or: [
+          { googleId: sub },
+          { email: email.toLowerCase() }
+        ]
+      })
+
+      if (user) {
+        if (!user.googleId) {
+          user.googleId = sub
+          await user.save()
+        }
+
+        const token = fastify.jwt.sign({ userId: user._id, type: 'session' }, { expiresIn: '30d' })
+        return {
+          token,
+          user: {
+            id: user._id,
+            email: user.email,
+            whatsappNumber: user.whatsappNumber,
+            displayName: user.displayName,
+            age: user.age,
+            gender: user.gender,
+            photo: user.photo,
+            vibeTags: user.vibeTags,
+            reliabilityScore: user.reliabilityScore,
+            onboardingCompleted: user.vibeTags && user.vibeTags.length > 0
+          }
+        }
+      } else {
+        const token = fastify.jwt.sign(
+          {
+            userId: 'temp',
+            type: 'onboarding',
+            data: {
+              email: email.toLowerCase(),
+              googleId: sub,
+              displayName: name || '',
+              photo: picture || ''
+            }
+          },
+          { expiresIn: '1h' }
+        )
+
+        return {
+          isNewUser: true,
+          token,
+          user: {
+            id: null,
+            email: email.toLowerCase(),
+            displayName: name || '',
+            photo: picture || '',
+            onboardingCompleted: false
+          }
+        }
+      }
+    } catch (error: any) {
+      fastify.log.error(error)
+      return reply.code(401).send({ error: 'Invalid Google credential' })
+    }
+  })
+
   fastify.post('/otp/request', async (request: any, reply) => {
     const { whatsappNumber } = request.body
 
@@ -261,19 +361,37 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
     }]
   }, async (request: any, reply) => {
-    const { photo, vibeTags, genderPreference, ageMin, ageMax, defaultGroupSize, displayName, age, gender, email } = request.body
+    const { photo, vibeTags, genderPreference, ageMin, ageMax, defaultGroupSize, displayName, age, gender, email, whatsappNumber } = request.body
     const userId = request.user.userId
 
     if (userId === 'temp') {
       const tempData = request.user.data || {}
+      
+      const rawWhatsapp = whatsappNumber || tempData.whatsappNumber
+      if (!rawWhatsapp) {
+        return reply.code(400).send({ error: 'WhatsApp number is required' })
+      }
+
+      let formattedNumber: string
+      try {
+        formattedNumber = formatWhatsAppNumber(rawWhatsapp)
+      } catch (error) {
+        return reply.code(400).send({ error: 'Invalid WhatsApp number format' })
+      }
+
+      const existingUser = await User.findOne({ whatsappNumber: formattedNumber })
+      if (existingUser) {
+        return reply.code(409).send({ error: 'WhatsApp number already registered' })
+      }
 
       const newUser = await User.create({
         email: email || tempData.email || `temp-${Date.now()}@gasin.com`,
-        whatsappNumber: tempData.whatsappNumber,
-        displayName: displayName || '',
+        whatsappNumber: formattedNumber,
+        googleId: tempData.googleId,
+        displayName: displayName || tempData.displayName || '',
         age: parseInt(age) || null,
         gender: gender || null,
-        photo: photo || null,
+        photo: photo || tempData.photo || null,
         vibeTags: vibeTags || [],
         genderPreference: genderPreference || 'any',
         ageMin: parseInt(ageMin) || 18,

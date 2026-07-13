@@ -5,6 +5,18 @@ import { MatchRequest } from '../models/MatchRequest'
 import { uploadToR2 } from '../utils/storage'
 
 export async function eventRoutes(fastify: FastifyInstance) {
+  fastify.get('/test-db', async () => {
+    return {
+      uri: process.env.MONGODB_URI,
+      dbName: Event.db?.name,
+      collectionName: Event.collection.name,
+      count: await Event.countDocuments({}),
+      activeCount: await Event.countDocuments({ status: 'active' }),
+      allCities: await Event.distinct('city'),
+      activeCities: await Event.distinct('city', { status: 'active', date: { $gte: new Date() } })
+    }
+  })
+
   fastify.get('/', async (request: any) => {
     const {
       city,

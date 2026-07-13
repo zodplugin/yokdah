@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import socket from "@/lib/socket";
+import { motion } from "framer-motion";
 
 export default function MatchChat() {
     const params = useParams();
@@ -492,7 +493,14 @@ export default function MatchChat() {
                             .filter(Boolean);
 
                         return (
-                            <div key={m._id || i} id={`msg-${m._id}`} className={`flex gap-3 max-w-2xl animate-fadeUp relative group transition-colors duration-500 ${isMe ? 'ml-auto flex-row-reverse' : ''}`}>
+                            <motion.div
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                key={m._id || i}
+                                id={`msg-${m._id}`}
+                                className={`flex gap-3 max-w-2xl relative group transition-colors duration-500 ${isMe ? 'ml-auto flex-row-reverse' : ''}`}
+                            >
 
                                 {!isMe && showName ? (
                                     <div className="w-8 h-8 rounded-full border border-slate-200 bg-emerald-50 flex-shrink-0 flex items-center justify-center text-[11px] font-medium text-emerald-700 mt-1 shadow-sm overflow-hidden">
@@ -584,7 +592,7 @@ export default function MatchChat() {
                                         </span>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })}
 
